@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JobsModule } from './jobs/jobs.module';
 import { ProcessingModule } from './processing/processing.module';
 import { UploadModule } from './upload/upload.module';
+import { RenderingModule } from './rendering/rendering.module';
 
 @Module({
   imports: [
@@ -11,6 +12,7 @@ import { UploadModule } from './upload/upload.module';
     JobsModule,
     ProcessingModule,
     UploadModule,
+    RenderingModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

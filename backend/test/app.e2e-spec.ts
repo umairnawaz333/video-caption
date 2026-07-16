@@ -79,4 +79,47 @@ describe('upload → transcribe flow (e2e, stubbed processors)', () => {
   it('404s on unknown job', async () => {
     await request(app.getHttpServer()).get('/api/jobs/nope').expect(404);
   });
+
+  it('exports and downloads, then job is deleted', async () => {
+    const up = await request(app.getHttpServer())
+      .post('/api/upload')
+      .attach('file', Buffer.from('fake'), { filename: 'c.mp4', contentType: 'video/mp4' })
+      .expect(201);
+    const id = up.body.jobId;
+    for (let i = 0; i < 50; i++) {
+      const { body } = await request(app.getHttpServer()).get(`/api/jobs/${id}`);
+      if (body.status === 'ready') break;
+      await sleep(100);
+    }
+
+    const style = {
+      fontFamily: 'Arial', fontSizePct: 5, textColor: '#FFFFFF',
+      background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
+      outline: { enabled: false, color: '#000000' },
+      position: 'bottom', verticalOffsetPct: 5,
+    };
+    await request(app.getHttpServer())
+      .post(`/api/jobs/${id}/export`).send({ style }).expect(202);
+
+    for (let i = 0; i < 50; i++) {
+      const { body } = await request(app.getHttpServer()).get(`/api/jobs/${id}`);
+      if (body.status === 'done') break;
+      await sleep(100);
+    }
+
+    await request(app.getHttpServer()).get(`/api/jobs/${id}/download`).expect(200);
+    await request(app.getHttpServer()).get(`/api/jobs/${id}`).expect(404); // cleaned up
+  });
+
+  it('rejects export with invalid style', async () => {
+    const up = await request(app.getHttpServer())
+      .post('/api/upload')
+      .attach('file', Buffer.from('fake'), { filename: 'd.mp4', contentType: 'video/mp4' })
+      .expect(201);
+    await sleep(300);
+    await request(app.getHttpServer())
+      .post(`/api/jobs/${up.body.jobId}/export`)
+      .send({ style: { fontFamily: 'Wingdings' } })
+      .expect(400);
+  });
 });
