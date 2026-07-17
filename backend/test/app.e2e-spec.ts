@@ -111,6 +111,13 @@ describe('upload → transcribe flow (e2e, stubbed processors)', () => {
     await request(app.getHttpServer()).get(`/api/jobs/${id}`).expect(404); // cleaned up
   });
 
+  it('does not rate-limit job polling (GET /api/jobs/:id)', async () => {
+    const { id } = jobs.create();
+    for (let i = 0; i < 40; i++) {
+      await request(app.getHttpServer()).get(`/api/jobs/${id}`).expect(200);
+    }
+  });
+
   it('rejects export with invalid style', async () => {
     const up = await request(app.getHttpServer())
       .post('/api/upload')

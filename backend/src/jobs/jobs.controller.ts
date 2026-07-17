@@ -2,6 +2,7 @@ import {
   BadRequestException, Body, Controller, Get, NotFoundException,
   Param, Patch, Res,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -18,6 +19,7 @@ export class JobsController {
     return job;
   }
 
+  @SkipThrottle()
   @Get(':id')
   getJob(@Param('id') id: string) {
     return this.jobs.toPublic(this.find(id));
@@ -40,6 +42,7 @@ export class JobsController {
     return this.jobs.toPublic(job);
   }
 
+  @SkipThrottle()
   @Get(':id/video')
   getVideo(@Param('id') id: string, @Res() res: Response) {
     const job = this.find(id);
