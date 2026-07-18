@@ -25,6 +25,9 @@ export interface CaptionStyle {
   outline: { enabled: boolean; color: string };
   // karaoke: 'color' tints the spoken word, 'box' draws a pill behind it
   highlight: { enabled: boolean; color: string; mode: 'color' | 'box' };
+  // shifts word highlight/single-word timing (seconds); + = later, - = earlier.
+  // Whisper marks word starts slightly early, so a small positive lag syncs better.
+  wordLagSec: number;
   position: 'top' | 'middle' | 'bottom';
   verticalOffsetPct: number;    // % of video height from the edge
 }

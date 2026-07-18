@@ -16,7 +16,8 @@ export default function CaptionOverlay({
   if (!active || containerHeight === 0) return null;
 
   const hasWords = !!active.words && active.words.length > 0;
-  const wordIdx = hasWords ? findActiveWordIndex(active, currentTime) : -1;
+  // wordLagSec delays the highlight to compensate for whisper's early word starts
+  const wordIdx = hasWords ? findActiveWordIndex(active, currentTime - style.wordLagSec) : -1;
   const bubble = styleToCss(style, containerHeight);
 
   // one word at a time, big

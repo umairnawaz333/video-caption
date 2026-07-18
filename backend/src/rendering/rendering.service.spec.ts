@@ -10,6 +10,7 @@ const style: CaptionStyle = {
   uppercase: false, bold: false, singleWord: false,
   outline: { enabled: false, color: '#000000' },
   highlight: { enabled: false, color: '#FDE047', mode: 'color' },
+  wordLagSec: 0,
   position: 'bottom', verticalOffsetPct: 5,
 };
 

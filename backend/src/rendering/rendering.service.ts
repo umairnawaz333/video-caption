@@ -30,6 +30,7 @@ export function validateStyle(input: unknown): CaptionStyle {
     s.outline && typeof s.outline.enabled === 'boolean' && HEX.test(s.outline.color) &&
     s.highlight && typeof s.highlight.enabled === 'boolean' && HEX.test(s.highlight.color) &&
     ['color', 'box'].includes(s.highlight.mode) &&
+    typeof s.wordLagSec === 'number' && s.wordLagSec >= -0.5 && s.wordLagSec <= 0.5 &&
     ['top', 'middle', 'bottom'].includes(s.position) &&
     typeof s.verticalOffsetPct === 'number' && s.verticalOffsetPct >= 0 && s.verticalOffsetPct <= 40;
   if (!ok) throw new BadRequestException('invalid caption style');

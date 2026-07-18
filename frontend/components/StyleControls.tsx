@@ -116,6 +116,14 @@ export default function StyleControls({
             />
           </span>
         </Row>
+        <Row label={`Word sync (${style.wordLagSec >= 0 ? '+' : ''}${style.wordLagSec.toFixed(2)}s)`}>
+          <input
+            type="range" min={-0.3} max={0.3} step={0.05} value={style.wordLagSec}
+            disabled={!style.highlight.enabled && !style.singleWord}
+            onChange={(e) => set({ wordLagSec: Number(e.target.value) })}
+            className="w-40 accent-indigo-500 disabled:opacity-30"
+          />
+        </Row>
       </div>
 
       <div>

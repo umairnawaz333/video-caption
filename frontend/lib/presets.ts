@@ -12,6 +12,7 @@ function make(partial: Partial<CaptionStyle> & { preset: string }): CaptionStyle
     background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
     outline: { enabled: false, color: '#000000' },
     highlight: { enabled: false, color: '#FDE047', mode: 'color' },
+    wordLagSec: 0.15,
     position: 'bottom', verticalOffsetPct: 6,
     ...partial,
   };

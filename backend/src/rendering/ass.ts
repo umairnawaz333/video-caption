@@ -78,10 +78,13 @@ export function generateAss(
   const tx = (t: string) => escapeAssText(style.uppercase ? t.toUpperCase() : t);
   const event = (start: number, end: number, text: string) =>
     `Dialogue: 0,${formatAssTime(start)},${formatAssTime(end)},Caption,,0,0,0,,${text}`;
-  // word events tile the chunk without gaps
+  // word events tile the chunk without gaps; inner boundaries shift by
+  // wordLagSec (whisper marks word starts slightly early), chunk edges stay put
+  const lagged = (s: Segment, i: number) =>
+    Math.min(Math.max(s.words![i].start + style.wordLagSec, s.start), s.end);
   const wordSpan = (s: Segment, i: number): [number, number] => [
-    i === 0 ? s.start : s.words![i].start,
-    i === s.words!.length - 1 ? s.end : s.words![i + 1].start,
+    i === 0 ? s.start : lagged(s, i),
+    i === s.words!.length - 1 ? s.end : lagged(s, i + 1),
   ];
 
   const events = segments.flatMap((s) => {

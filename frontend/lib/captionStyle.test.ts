@@ -11,6 +11,7 @@ const style: CaptionStyle = {
   background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
   outline: { enabled: false, color: '#000000' },
   highlight: { enabled: false, color: '#FDE047', mode: 'color' },
+  wordLagSec: 0,
   position: 'bottom', verticalOffsetPct: 5,
 };
 

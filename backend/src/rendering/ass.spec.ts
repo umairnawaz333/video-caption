@@ -11,6 +11,7 @@ const baseStyle: CaptionStyle = {
   background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
   outline: { enabled: false, color: '#000000' },
   highlight: { enabled: false, color: '#FDE047', mode: 'color' },
+  wordLagSec: 0,
   position: 'bottom',
   verticalOffsetPct: 5,
 };
@@ -163,5 +164,39 @@ describe('generateAss style expansion', () => {
     // active word: thick outline in highlight color; text keeps primary color
     expect(events[0]).toMatch(/\{\\bord\d+\\3c&H5EC522&\}hello\{\\bord\d+\\3c&H[0-9A-F]{6}&\}/);
     expect(events[0]).not.toContain('\\1c'); // box mode does not tint the text
+  });
+});
+
+describe('generateAss word lag (sync tuning)', () => {
+  const segs: Segment[] = [
+    {
+      id: '1', start: 0, end: 1.0, text: 'one two three',
+      words: [
+        { start: 0, end: 0.3, text: 'one' },
+        { start: 0.3, end: 0.6, text: 'two' },
+        { start: 0.6, end: 1.0, text: 'three' },
+      ],
+    },
+  ];
+  const style: CaptionStyle = {
+    ...baseStyle,
+    highlight: { enabled: true, color: '#FFD700', mode: 'color' },
+    wordLagSec: 0.15,
+  };
+
+  it('shifts word boundaries later by wordLagSec, keeping chunk edges', () => {
+    const ass = generateAss(segs, style, video);
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    // boundaries 0.3/0.6 shift to 0.45/0.75; chunk edges 0.0 and 1.0 stay put
+    expect(events[0]).toContain('Dialogue: 0,0:00:00.00,0:00:00.45');
+    expect(events[1]).toContain('Dialogue: 0,0:00:00.45,0:00:00.75');
+    expect(events[2]).toContain('Dialogue: 0,0:00:00.75,0:00:01.00');
+  });
+
+  it('clamps shifted boundaries inside the chunk', () => {
+    const big = generateAss(segs, { ...style, wordLagSec: 0.5 }, video);
+    const events = big.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    // 0.6 + 0.5 = 1.1 clamps to chunk end 1.0
+    expect(events[2]).toContain('Dialogue: 0,0:00:01.00,0:00:01.00');
   });
 });
