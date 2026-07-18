@@ -11,6 +11,21 @@ import json
 import sys
 
 
+def collect(segments, info):
+    """Drain the segment generator, emitting PROGRESS lines on stderr.
+
+    stdout stays reserved for the final JSON; the backend parses these
+    stderr lines to drive the UI progress bar.
+    """
+    total = getattr(info, "duration", 0) or 0
+    segs = []
+    for s in segments:
+        segs.append(s)
+        if total > 0:
+            print("PROGRESS %d" % min(99, int(s.end / total * 100)), file=sys.stderr, flush=True)
+    return segs
+
+
 def serialize(segs):
     out = []
     for s in segs:
@@ -45,13 +60,13 @@ def main() -> int:
     segments, info = model.transcribe(
         args.audio, task="transcribe", vad_filter=True, word_timestamps=True
     )
-    segs = list(segments)  # generator -> list (runs the model)
+    segs = collect(segments, info)  # generator -> list (runs the model)
 
     if info.language != "en":
         segments, info = model.transcribe(
             args.audio, task="translate", vad_filter=True, word_timestamps=True
         )
-        segs = list(segments)
+        segs = collect(segments, info)
 
     json.dump({"language": info.language, "segments": serialize(segs)}, sys.stdout)
     return 0

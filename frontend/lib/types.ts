@@ -33,6 +33,7 @@ export interface PublicJob {
   id: string;
   status: JobStatus;
   error?: string;
+  progress?: number;            // 0-100 within the current long-running step
   video?: VideoMeta;
   tracks: CaptionTrack[];
   createdAt: number;

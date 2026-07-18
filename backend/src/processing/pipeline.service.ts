@@ -28,11 +28,14 @@ export class PipelineService {
       const wav = path.join(job.dir, 'audio.wav');
       await this.ffmpeg.extractAudio(inputPath, wav);
 
-      this.jobs.update(jobId, { status: 'transcribing' });
-      const result = await this.transcription.transcribe(wav);
+      this.jobs.update(jobId, { status: 'transcribing', progress: 0 });
+      const result = await this.transcription.transcribe(wav, (pct) =>
+        this.jobs.update(jobId, { progress: pct }),
+      );
 
       this.jobs.update(jobId, {
         status: 'ready',
+        progress: 100,
         tracks: [{
           language: 'en',
           // short one-line chunks that flip quickly as speech flows

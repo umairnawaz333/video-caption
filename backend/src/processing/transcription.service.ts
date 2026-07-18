@@ -12,7 +12,7 @@ export interface TranscriptResult {
 export class TranscriptionService {
   private script = config.transcriberScript;
 
-  transcribe(audioPath: string): Promise<TranscriptResult> {
+  transcribe(audioPath: string, onProgress?: (pct: number) => void): Promise<TranscriptResult> {
     return new Promise((resolve, reject) => {
       const proc = spawn(
         config.pythonBin,
@@ -22,7 +22,16 @@ export class TranscriptionService {
       let out = '';
       let err = '';
       proc.stdout.on('data', (d) => (out += d));
-      proc.stderr.on('data', (d) => (err += d));
+      proc.stderr.on('data', (d) => {
+        const chunk = String(d);
+        err += chunk;
+        if (onProgress) {
+          // the sidecar emits "PROGRESS <0-100>" lines as it decodes
+          for (const m of chunk.matchAll(/^PROGRESS (\d{1,3})$/gm)) {
+            onProgress(Math.min(100, Number(m[1])));
+          }
+        }
+      });
       proc.on('error', reject);
       proc.on('close', (code) => {
         if (code !== 0) return reject(new Error(`transcriber exited ${code}: ${err.slice(-500)}`));

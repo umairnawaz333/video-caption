@@ -33,4 +33,17 @@ print("model exploded", file=sys.stderr); sys.exit(3)`);
     fs.writeFileSync(fake, `print("not json")`);
     await expect(makeService(fake).transcribe('/any/audio.wav')).rejects.toThrow(/invalid JSON/i);
   });
+
+  it('reports PROGRESS stderr lines through the callback', async () => {
+    const fake = path.join(dir, 'progress.py');
+    fs.writeFileSync(fake, `import json,sys
+print("PROGRESS 25", file=sys.stderr, flush=True)
+print("PROGRESS 80", file=sys.stderr, flush=True)
+print("some other log line", file=sys.stderr, flush=True)
+json.dump({"language":"en","segments":[]}, sys.stdout)`);
+    const seen: number[] = [];
+    const result = await makeService(fake).transcribe('/any/audio.wav', (pct) => seen.push(pct));
+    expect(result.language).toBe('en');
+    expect(seen).toEqual([25, 80]);
+  });
 });
