@@ -14,7 +14,8 @@ export default function TranscriptEditor({
   onSeek: (t: number) => void; currentTime: number;
 }) {
   const setText = (id: string, text: string) =>
-    onChange(segments.map((s) => (s.id === id ? { ...s, text } : s)));
+    // manual edits invalidate word-level timings, so drop them for that chunk
+    onChange(segments.map((s) => (s.id === id ? { ...s, text, words: undefined } : s)));
 
   if (segments.length === 0) {
     return (

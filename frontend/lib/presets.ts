@@ -7,6 +7,7 @@ function make(partial: Partial<CaptionStyle> & { preset: string }): CaptionStyle
     fontFamily: 'Arial', fontSizePct: 4.5, textColor: '#FFFFFF',
     background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
     outline: { enabled: false, color: '#000000' },
+    highlight: { enabled: false, color: '#FDE047' },
     position: 'bottom', verticalOffsetPct: 6,
     ...partial,
   };
@@ -28,6 +29,7 @@ export const PRESETS: { id: string; name: string; style: CaptionStyle }[] = [
       preset: 'bold-reels', fontFamily: 'Anton', fontSizePct: 6.5,
       background: { enabled: false, color: '#000000', opacity: 0.6, rounded: true },
       outline: { enabled: true, color: '#000000' },
+      highlight: { enabled: true, color: '#FDE047' },
       verticalOffsetPct: 18,
     }),
   },
@@ -43,9 +45,10 @@ export const PRESETS: { id: string; name: string; style: CaptionStyle }[] = [
   {
     id: 'karaoke', name: 'Karaoke',
     style: make({
-      preset: 'karaoke', fontFamily: 'Bangers', fontSizePct: 6, textColor: '#FFD700',
+      preset: 'karaoke', fontFamily: 'Bangers', fontSizePct: 6, textColor: '#FFFFFF',
       background: { enabled: false, color: '#000000', opacity: 0.6, rounded: true },
       outline: { enabled: true, color: '#000000' },
+      highlight: { enabled: true, color: '#FFD700' },
       verticalOffsetPct: 12,
     }),
   },

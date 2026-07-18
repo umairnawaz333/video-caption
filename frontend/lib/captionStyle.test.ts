@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { findActiveSegment, hexWithOpacity, positionToCss, styleToCss } from './captionStyle';
+import {
+  findActiveSegment, findActiveWordIndex, hexWithOpacity, positionToCss, styleToCss,
+} from './captionStyle';
 import { PRESETS, FONTS } from './presets';
 import type { CaptionStyle, Segment } from './types';
 
@@ -7,6 +9,7 @@ const style: CaptionStyle = {
   fontFamily: 'Arial', fontSizePct: 5, textColor: '#FFFFFF',
   background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
   outline: { enabled: false, color: '#000000' },
+  highlight: { enabled: false, color: '#FDE047' },
   position: 'bottom', verticalOffsetPct: 5,
 };
 
@@ -56,12 +59,40 @@ describe('findActiveSegment', () => {
   });
 });
 
+describe('findActiveWordIndex', () => {
+  const seg: Segment = {
+    id: 'a', start: 0, end: 1.6, text: 'hello brave world',
+    words: [
+      { start: 0, end: 0.5, text: 'hello' },
+      { start: 0.5, end: 1.0, text: 'brave' },
+      { start: 1.1, end: 1.6, text: 'world' },
+    ],
+  };
+  it('finds the spoken word', () => {
+    expect(findActiveWordIndex(seg, 0.2)).toBe(0);
+    expect(findActiveWordIndex(seg, 0.7)).toBe(1);
+    expect(findActiveWordIndex(seg, 1.5)).toBe(2);
+  });
+  it('keeps the previous word lit during inter-word gaps', () => {
+    expect(findActiveWordIndex(seg, 1.05)).toBe(1);
+  });
+  it('returns -1 for segments without words', () => {
+    expect(findActiveWordIndex({ id: 'b', start: 0, end: 1, text: 'x' }, 0.5)).toBe(-1);
+  });
+});
+
 describe('presets', () => {
-  it('has 5 presets, all fonts in FONTS list', () => {
+  it('has 5 presets, all fonts in FONTS list, all with highlight config', () => {
     expect(PRESETS).toHaveLength(5);
     for (const p of PRESETS) {
       expect(FONTS).toContain(p.style.fontFamily);
       expect(p.style.fontSizePct).toBeGreaterThan(0);
+      expect(typeof p.style.highlight.enabled).toBe('boolean');
+      expect(p.style.highlight.color).toMatch(/^#[0-9A-F]{6}$/i);
     }
+  });
+  it('karaoke and bold-reels ship with highlight on', () => {
+    expect(PRESETS.find((p) => p.id === 'karaoke')!.style.highlight.enabled).toBe(true);
+    expect(PRESETS.find((p) => p.id === 'bold-reels')!.style.highlight.enabled).toBe(true);
   });
 });

@@ -46,3 +46,18 @@ export function positionToCss(style: CaptionStyle): CSSProperties {
 export function findActiveSegment(segments: Segment[], time: number): Segment | null {
   return segments.find((s) => time >= s.start && time < s.end) ?? null;
 }
+
+/**
+ * Index of the word being spoken at `time`. During inter-word silence the
+ * previous word stays lit (matches the burned ASS output, which tiles word
+ * events without gaps). -1 when the segment has no word timings.
+ */
+export function findActiveWordIndex(segment: Segment, time: number): number {
+  const words = segment.words;
+  if (!words || words.length === 0) return -1;
+  let active = 0;
+  for (let i = 0; i < words.length; i++) {
+    if (time >= words[i].start) active = i;
+  }
+  return active;
+}

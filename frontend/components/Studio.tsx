@@ -46,8 +46,11 @@ export default function Studio({ job, onReset }: { job: PublicJob; onReset: () =
       </aside>
 
       <section className="space-y-6">
-        <div ref={containerRef} className="relative overflow-hidden rounded-2xl bg-black">
-          <video ref={videoRef} src={videoUrl(job.id)} controls className="w-full" />
+        <div ref={containerRef} className="relative flex justify-center overflow-hidden rounded-2xl bg-black">
+          <video
+            ref={videoRef} src={videoUrl(job.id)} controls
+            className="max-h-[60vh] w-auto max-w-full"
+          />
           <CaptionOverlay
             segments={segments} style={style}
             currentTime={currentTime} containerHeight={containerHeight}

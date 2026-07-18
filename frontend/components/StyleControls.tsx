@@ -73,6 +73,20 @@ export default function StyleControls({
             />
           </span>
         </Row>
+        <Row label="Highlight spoken word">
+          <span className="flex items-center gap-2">
+            <input
+              type="checkbox" checked={style.highlight.enabled}
+              onChange={(e) => set({ highlight: { ...style.highlight, enabled: e.target.checked } })}
+              className="accent-indigo-500"
+            />
+            <input
+              type="color" value={style.highlight.color} disabled={!style.highlight.enabled}
+              onChange={(e) => set({ highlight: { ...style.highlight, color: e.target.value.toUpperCase() } })}
+              className="h-8 w-14 cursor-pointer rounded border border-slate-700 bg-slate-900 disabled:opacity-30"
+            />
+          </span>
+        </Row>
       </div>
 
       <div>
