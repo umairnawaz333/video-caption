@@ -7,8 +7,9 @@ import { CaptionStyle } from '../jobs/types';
 const style: CaptionStyle = {
   fontFamily: 'Arial', fontSizePct: 5, textColor: '#FFFFFF',
   background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
+  uppercase: false, bold: false, singleWord: false,
   outline: { enabled: false, color: '#000000' },
-  highlight: { enabled: false, color: '#FDE047' },
+  highlight: { enabled: false, color: '#FDE047', mode: 'color' },
   position: 'bottom', verticalOffsetPct: 5,
 };
 

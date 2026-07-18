@@ -7,9 +7,10 @@ import type { CaptionStyle, Segment } from './types';
 
 const style: CaptionStyle = {
   fontFamily: 'Arial', fontSizePct: 5, textColor: '#FFFFFF',
+  uppercase: false, bold: false, singleWord: false,
   background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
   outline: { enabled: false, color: '#000000' },
-  highlight: { enabled: false, color: '#FDE047' },
+  highlight: { enabled: false, color: '#FDE047', mode: 'color' },
   position: 'bottom', verticalOffsetPct: 5,
 };
 
@@ -82,17 +83,33 @@ describe('findActiveWordIndex', () => {
 });
 
 describe('presets', () => {
-  it('has 5 presets, all fonts in FONTS list, all with highlight config', () => {
-    expect(PRESETS).toHaveLength(5);
+  it('has 9 presets, all fonts in FONTS list, all with valid config', () => {
+    expect(PRESETS).toHaveLength(9);
     for (const p of PRESETS) {
       expect(FONTS).toContain(p.style.fontFamily);
       expect(p.style.fontSizePct).toBeGreaterThan(0);
+      expect(typeof p.style.uppercase).toBe('boolean');
+      expect(typeof p.style.bold).toBe('boolean');
+      expect(typeof p.style.singleWord).toBe('boolean');
       expect(typeof p.style.highlight.enabled).toBe('boolean');
+      expect(['color', 'box']).toContain(p.style.highlight.mode);
       expect(p.style.highlight.color).toMatch(/^#[0-9A-F]{6}$/i);
     }
   });
-  it('karaoke and bold-reels ship with highlight on', () => {
+  it('screenshot presets have their signature traits', () => {
+    expect(PRESETS.find((p) => p.id === 'pop-word')!.style.singleWord).toBe(true);
+    expect(PRESETS.find((p) => p.id === 'pop-word')!.style.uppercase).toBe(true);
+    expect(PRESETS.find((p) => p.id === 'serif')!.style.highlight.mode).toBe('box');
+    expect(PRESETS.find((p) => p.id === 'impact')!.style.uppercase).toBe(true);
     expect(PRESETS.find((p) => p.id === 'karaoke')!.style.highlight.enabled).toBe(true);
     expect(PRESETS.find((p) => p.id === 'bold-reels')!.style.highlight.enabled).toBe(true);
+  });
+});
+
+describe('styleToCss expansion', () => {
+  it('maps uppercase and bold', () => {
+    const css = styleToCss({ ...style, uppercase: true, bold: true }, 400);
+    expect(css.textTransform).toBe('uppercase');
+    expect(css.fontWeight).toBe(700);
   });
 });

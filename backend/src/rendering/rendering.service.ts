@@ -8,7 +8,10 @@ import { CaptionStyle } from '../jobs/types';
 import { generateAss } from './ass';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
-const FONTS = ['Arial', 'Georgia', 'Impact', 'Anton', 'Bangers'];
+const FONTS = [
+  'Arial', 'Georgia', 'Impact', 'Anton', 'Bangers',
+  'Poppins', 'Bebas Neue', 'Archivo Black', 'Luckiest Guy', 'Pacifico',
+];
 
 export function validateStyle(input: unknown): CaptionStyle {
   const s = input as CaptionStyle;
@@ -17,12 +20,16 @@ export function validateStyle(input: unknown): CaptionStyle {
     FONTS.includes(s.fontFamily) &&
     typeof s.fontSizePct === 'number' && s.fontSizePct >= 1 && s.fontSizePct <= 15 &&
     typeof s.textColor === 'string' && HEX.test(s.textColor) &&
+    typeof s.uppercase === 'boolean' &&
+    typeof s.bold === 'boolean' &&
+    typeof s.singleWord === 'boolean' &&
     s.background && typeof s.background.enabled === 'boolean' &&
     HEX.test(s.background.color) &&
     s.background.opacity >= 0 && s.background.opacity <= 1 &&
     typeof s.background.rounded === 'boolean' &&
     s.outline && typeof s.outline.enabled === 'boolean' && HEX.test(s.outline.color) &&
     s.highlight && typeof s.highlight.enabled === 'boolean' && HEX.test(s.highlight.color) &&
+    ['color', 'box'].includes(s.highlight.mode) &&
     ['top', 'middle', 'bottom'].includes(s.position) &&
     typeof s.verticalOffsetPct === 'number' && s.verticalOffsetPct >= 0 && s.verticalOffsetPct <= 40;
   if (!ok) throw new BadRequestException('invalid caption style');

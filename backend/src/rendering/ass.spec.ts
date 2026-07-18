@@ -5,9 +5,12 @@ const baseStyle: CaptionStyle = {
   fontFamily: 'Arial',
   fontSizePct: 5,
   textColor: '#FFFFFF',
+  uppercase: false,
+  bold: false,
+  singleWord: false,
   background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
   outline: { enabled: false, color: '#000000' },
-  highlight: { enabled: false, color: '#FDE047' },
+  highlight: { enabled: false, color: '#FDE047', mode: 'color' },
   position: 'bottom',
   verticalOffsetPct: 5,
 };
@@ -65,7 +68,7 @@ describe('generateAss', () => {
 describe('generateAss word highlight (karaoke)', () => {
   const highlightStyle: CaptionStyle = {
     ...baseStyle,
-    highlight: { enabled: true, color: '#FFD700' },
+    highlight: { enabled: true, color: '#FFD700', mode: 'color' },
   };
   const wordSegments: Segment[] = [
     {
@@ -107,5 +110,58 @@ describe('generateAss word highlight (karaoke)', () => {
     expect(events).toHaveLength(1);
     expect(events[0]).toContain('hello brave world');
     expect(events[0]).not.toContain('\\1c');
+  });
+});
+
+describe('generateAss style expansion', () => {
+  const wordSegs: Segment[] = [
+    {
+      id: '1', start: 0, end: 1.0, text: 'hello brave world',
+      words: [
+        { start: 0, end: 0.3, text: 'hello' },
+        { start: 0.3, end: 0.6, text: 'brave' },
+        { start: 0.6, end: 1.0, text: 'world' },
+      ],
+    },
+  ];
+
+  it('sets Bold=-1 in the style line when bold', () => {
+    const ass = generateAss(wordSegs, { ...baseStyle, bold: true }, video);
+    expect(ass).toMatch(/Style: Caption,Arial,54,[^,]+,[^,]+,[^,]+,[^,]+,-1,0,0,0/);
+  });
+
+  it('uppercases text when uppercase is on', () => {
+    const ass = generateAss(wordSegs, { ...baseStyle, uppercase: true }, video);
+    expect(ass).toContain('HELLO BRAVE WORLD');
+  });
+
+  it('single-word mode emits one event per word with only that word', () => {
+    const ass = generateAss(wordSegs, { ...baseStyle, singleWord: true, uppercase: true }, video);
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(3);
+    expect(events[0]).toContain(',HELLO');
+    expect(events[0]).not.toContain('BRAVE');
+    expect(events[1]).toContain(',BRAVE');
+    expect(events[2]).toContain(',WORLD');
+  });
+
+  it('single-word mode falls back to the full chunk without word timings', () => {
+    const plain: Segment[] = [{ id: '2', start: 0, end: 1, text: 'edited text' }];
+    const ass = generateAss(plain, { ...baseStyle, singleWord: true }, video);
+    expect(ass).toContain(',edited text');
+  });
+
+  it('box highlight mode wraps the active word in a thick colored outline', () => {
+    const style: CaptionStyle = {
+      ...baseStyle,
+      background: { ...baseStyle.background, enabled: false },
+      highlight: { enabled: true, color: '#22C55E', mode: 'box' },
+    };
+    const ass = generateAss(wordSegs, style, video);
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(3);
+    // active word: thick outline in highlight color; text keeps primary color
+    expect(events[0]).toMatch(/\{\\bord\d+\\3c&H5EC522&\}hello\{\\bord\d+\\3c&H[0-9A-F]{6}&\}/);
+    expect(events[0]).not.toContain('\\1c'); // box mode does not tint the text
   });
 });

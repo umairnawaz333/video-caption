@@ -22,12 +22,26 @@ export function styleToCss(style: CaptionStyle, containerHeight: number): CSSPro
     fontSize,
     lineHeight: 1.25,
     color: style.textColor,
+    fontWeight: style.bold ? 700 : 400,
+    textTransform: style.uppercase ? 'uppercase' : 'none',
     textAlign: 'center',
     whiteSpace: 'pre-wrap',
     padding: bg.enabled ? `${fontSize * 0.18}px ${fontSize * 0.45}px` : 0,
     borderRadius: bg.enabled && bg.rounded ? fontSize * 0.35 : 0,
     backgroundColor: bg.enabled ? hexWithOpacity(bg.color, bg.opacity) : 'transparent',
     textShadow: !bg.enabled && style.outline.enabled ? outlineShadow(style.outline.color) : 'none',
+  };
+}
+
+/** Styling for the active word in 'box' highlight mode: a pill behind the word. */
+export function wordBoxCss(style: CaptionStyle, containerHeight: number): CSSProperties {
+  const fontSize = (style.fontSizePct / 100) * containerHeight;
+  return {
+    backgroundColor: style.highlight.color,
+    borderRadius: fontSize * 0.18,
+    padding: `0 ${fontSize * 0.15}px`,
+    // the pill replaces the text outline for that word
+    textShadow: 'none',
   };
 }
 

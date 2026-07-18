@@ -59,6 +59,27 @@ export default function StyleControls({
             className="h-8 w-14 cursor-pointer rounded border border-slate-700 bg-slate-900"
           />
         </Row>
+        <Row label="Uppercase">
+          <input
+            type="checkbox" checked={style.uppercase}
+            onChange={(e) => set({ uppercase: e.target.checked })}
+            className="accent-indigo-500"
+          />
+        </Row>
+        <Row label="Bold">
+          <input
+            type="checkbox" checked={style.bold}
+            onChange={(e) => set({ bold: e.target.checked })}
+            className="accent-indigo-500"
+          />
+        </Row>
+        <Row label="One word at a time">
+          <input
+            type="checkbox" checked={style.singleWord}
+            onChange={(e) => set({ singleWord: e.target.checked })}
+            className="accent-indigo-500"
+          />
+        </Row>
         <Row label="Outline">
           <span className="flex items-center gap-2">
             <input
@@ -80,6 +101,14 @@ export default function StyleControls({
               onChange={(e) => set({ highlight: { ...style.highlight, enabled: e.target.checked } })}
               className="accent-indigo-500"
             />
+            <select
+              value={style.highlight.mode} disabled={!style.highlight.enabled}
+              onChange={(e) => set({ highlight: { ...style.highlight, mode: e.target.value as 'color' | 'box' } })}
+              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm disabled:opacity-30"
+            >
+              <option value="color">Color</option>
+              <option value="box">Box</option>
+            </select>
             <input
               type="color" value={style.highlight.color} disabled={!style.highlight.enabled}
               onChange={(e) => set({ highlight: { ...style.highlight, color: e.target.value.toUpperCase() } })}

@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Anton&family=Bangers&family=Poppins:wght@400;700&family=Bebas+Neue&family=Archivo+Black&family=Luckiest+Guy&family=Pacifico&display=swap"
           rel="stylesheet"
         />
       </head>

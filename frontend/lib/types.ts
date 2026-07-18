@@ -18,9 +18,13 @@ export interface CaptionStyle {
   fontFamily: string;
   fontSizePct: number;
   textColor: string;
+  uppercase: boolean;           // render text in ALL CAPS
+  bold: boolean;                // heavier text weight
+  singleWord: boolean;          // show one word at a time (needs word timings)
   background: { enabled: boolean; color: string; opacity: number; rounded: boolean };
   outline: { enabled: boolean; color: string };
-  highlight: { enabled: boolean; color: string };  // karaoke: color the spoken word
+  // karaoke: 'color' tints the spoken word, 'box' draws a pill behind it
+  highlight: { enabled: boolean; color: string; mode: 'color' | 'box' };
   position: 'top' | 'middle' | 'bottom';
   verticalOffsetPct: number;
 }

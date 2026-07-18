@@ -58,33 +58,54 @@ export function generateAss(
     '',
     '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    `Style: Caption,${style.fontFamily},${fontSize},${primary},${primary},${outlineColor},${outlineColor},0,0,0,0,100,100,0,0,${borderStyle},${outlineWidth},0,${ALIGN[style.position]},60,60,${marginV},1`,
+    `Style: Caption,${style.fontFamily},${fontSize},${primary},${primary},${outlineColor},${outlineColor},${style.bold ? -1 : 0},0,0,0,100,100,0,0,${borderStyle},${outlineWidth},0,${ALIGN[style.position]},60,60,${marginV},1`,
     '',
     '[Events]',
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
   ];
 
-  // \1c override tags use &HBBGGRR& (no alpha byte)
-  const highlightTag = `{\\1c&H${hexToAssColor(style.highlight.color).slice(4)}&}`;
-  const primaryTag = `{\\1c&H${primary.slice(4)}&}`;
+  // inline override tags use &HBBGGRR& (no alpha byte)
+  const hl6 = hexToAssColor(style.highlight.color).slice(4);
+  const primary6 = primary.slice(4);
+  const outline6 = outlineColor.slice(4);
+  const highlightTag = `{\\1c&H${hl6}&}`;
+  const primaryTag = `{\\1c&H${primary6}&}`;
+  // box mode: a thick rounded stroke behind the active word reads as a pill
+  const boxWidth = Math.max(4, Math.round(fontSize * 0.22));
+  const boxOnTag = `{\\bord${boxWidth}\\3c&H${hl6}&}`;
+  const boxOffTag = `{\\bord${outlineWidth}\\3c&H${outline6}&}`;
+
+  const tx = (t: string) => escapeAssText(style.uppercase ? t.toUpperCase() : t);
+  const event = (start: number, end: number, text: string) =>
+    `Dialogue: 0,${formatAssTime(start)},${formatAssTime(end)},Caption,,0,0,0,,${text}`;
+  // word events tile the chunk without gaps
+  const wordSpan = (s: Segment, i: number): [number, number] => [
+    i === 0 ? s.start : s.words![i].start,
+    i === s.words!.length - 1 ? s.end : s.words![i + 1].start,
+  ];
 
   const events = segments.flatMap((s) => {
-    const plain = `Dialogue: 0,${formatAssTime(s.start)},${formatAssTime(s.end)},Caption,,0,0,0,,${escapeAssText(s.text)}`;
-    if (!style.highlight.enabled || !s.words || s.words.length === 0) return [plain];
+    const hasWords = !!s.words && s.words.length > 0;
 
-    // karaoke: one event per word, tiling the chunk without gaps; the active
-    // word is wrapped in a color override, the rest stay in the primary color
-    return s.words.map((word, i) => {
-      const start = i === 0 ? s.start : s.words![i].start;
-      const end = i === s.words!.length - 1 ? s.end : s.words![i + 1].start;
+    // one word at a time, big
+    if (style.singleWord && hasWords) {
+      return s.words!.map((w, i) => event(...wordSpan(s, i), tx(w.text)));
+    }
+
+    if (!style.highlight.enabled || !hasWords) return [event(s.start, s.end, tx(s.text))];
+
+    // karaoke: one event per word; the active word is tinted ('color') or
+    // wrapped in a thick colored stroke ('box'), the rest stay unchanged
+    return s.words!.map((_, i) => {
       const text = s.words!
-        .map((w, j) =>
-          j === i
-            ? `${highlightTag}${escapeAssText(w.text)}${primaryTag}`
-            : escapeAssText(w.text),
-        )
+        .map((w, j) => {
+          if (j !== i) return tx(w.text);
+          return style.highlight.mode === 'box'
+            ? `${boxOnTag}${tx(w.text)}${boxOffTag}`
+            : `${highlightTag}${tx(w.text)}${primaryTag}`;
+        })
         .join(' ');
-      return `Dialogue: 0,${formatAssTime(start)},${formatAssTime(end)},Caption,,0,0,0,,${text}`;
+      return event(...wordSpan(s, i), text);
     });
   });
 
