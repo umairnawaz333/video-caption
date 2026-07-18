@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import * as path from 'path';
 import { JobsService } from '../jobs/jobs.service';
+import { chunkSegments } from './chunk';
 import { FfmpegService } from './ffmpeg.service';
 import { TranscriptionService } from './transcription.service';
 
@@ -35,7 +35,8 @@ export class PipelineService {
         status: 'ready',
         tracks: [{
           language: 'en',
-          segments: result.segments.map((s) => ({ id: randomUUID(), ...s })),
+          // short one-line chunks that flip quickly as speech flows
+          segments: chunkSegments(result.segments),
         }],
       });
     } catch (e) {

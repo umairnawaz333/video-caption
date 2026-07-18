@@ -7,6 +7,7 @@ const baseStyle: CaptionStyle = {
   textColor: '#FFFFFF',
   background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
   outline: { enabled: false, color: '#000000' },
+  highlight: { enabled: false, color: '#FDE047' },
   position: 'bottom',
   verticalOffsetPct: 5,
 };
@@ -58,5 +59,53 @@ describe('generateAss', () => {
     const ass = generateAss(segments, style, video);
     expect(ass).toMatch(/,1,\d+,0,5,60,60,0,1/); // BorderStyle 1, align 5 (middle), marginV 0
     expect(ass).toContain('&H00332211'); // outline color BGR
+  });
+});
+
+describe('generateAss word highlight (karaoke)', () => {
+  const highlightStyle: CaptionStyle = {
+    ...baseStyle,
+    highlight: { enabled: true, color: '#FFD700' },
+  };
+  const wordSegments: Segment[] = [
+    {
+      id: '1',
+      start: 0,
+      end: 1.6,
+      text: 'hello brave world',
+      words: [
+        { start: 0, end: 0.5, text: 'hello' },
+        { start: 0.5, end: 1.0, text: 'brave' },
+        { start: 1.1, end: 1.6, text: 'world' },
+      ],
+    },
+  ];
+
+  it('emits one dialogue event per word, covering the whole chunk', () => {
+    const ass = generateAss(wordSegments, highlightStyle, video);
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(3);
+    // each event shows the full text with the active word wrapped in a color override
+    expect(events[0]).toContain('{\\1c&H00D7FF&}hello{\\1c&HFFFFFF&} brave world');
+    expect(events[1]).toContain('hello {\\1c&H00D7FF&}brave{\\1c&HFFFFFF&} world');
+    expect(events[2]).toContain('hello brave {\\1c&H00D7FF&}world{\\1c&HFFFFFF&}');
+    // word events tile the chunk without gaps: each starts when the previous ends
+    expect(events[0]).toContain('Dialogue: 0,0:00:00.00,0:00:00.50');
+    expect(events[1]).toContain('Dialogue: 0,0:00:00.50,0:00:01.10');
+    expect(events[2]).toContain('Dialogue: 0,0:00:01.10,0:00:01.60');
+  });
+
+  it('falls back to a plain event when a segment has no word timings', () => {
+    const plain: Segment[] = [{ id: '2', start: 2, end: 3, text: 'edited text' }];
+    const ass = generateAss(plain, highlightStyle, video);
+    expect(ass).toContain('Dialogue: 0,0:00:02.00,0:00:03.00,Caption,,0,0,0,,edited text');
+  });
+
+  it('emits plain events when highlight is disabled even with words present', () => {
+    const ass = generateAss(wordSegments, baseStyle, video);
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain('hello brave world');
+    expect(events[0]).not.toContain('\\1c');
   });
 });

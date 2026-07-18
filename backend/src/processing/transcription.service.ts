@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { spawn } from 'child_process';
 import { config } from '../config';
+import { RawSegment } from './chunk';
 
 export interface TranscriptResult {
   language: string;
-  segments: { start: number; end: number; text: string }[];
+  segments: RawSegment[];
 }
 
 @Injectable()

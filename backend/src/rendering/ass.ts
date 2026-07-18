@@ -64,10 +64,29 @@ export function generateAss(
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
   ];
 
-  const events = segments.map(
-    (s) =>
-      `Dialogue: 0,${formatAssTime(s.start)},${formatAssTime(s.end)},Caption,,0,0,0,,${escapeAssText(s.text)}`,
-  );
+  // \1c override tags use &HBBGGRR& (no alpha byte)
+  const highlightTag = `{\\1c&H${hexToAssColor(style.highlight.color).slice(4)}&}`;
+  const primaryTag = `{\\1c&H${primary.slice(4)}&}`;
+
+  const events = segments.flatMap((s) => {
+    const plain = `Dialogue: 0,${formatAssTime(s.start)},${formatAssTime(s.end)},Caption,,0,0,0,,${escapeAssText(s.text)}`;
+    if (!style.highlight.enabled || !s.words || s.words.length === 0) return [plain];
+
+    // karaoke: one event per word, tiling the chunk without gaps; the active
+    // word is wrapped in a color override, the rest stay in the primary color
+    return s.words.map((word, i) => {
+      const start = i === 0 ? s.start : s.words![i].start;
+      const end = i === s.words!.length - 1 ? s.end : s.words![i + 1].start;
+      const text = s.words!
+        .map((w, j) =>
+          j === i
+            ? `${highlightTag}${escapeAssText(w.text)}${primaryTag}`
+            : escapeAssText(w.text),
+        )
+        .join(' ');
+      return `Dialogue: 0,${formatAssTime(start)},${formatAssTime(end)},Caption,,0,0,0,,${text}`;
+    });
+  });
 
   return [...header, ...events, ''].join('\n');
 }

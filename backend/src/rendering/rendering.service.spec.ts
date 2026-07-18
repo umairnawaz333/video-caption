@@ -8,6 +8,7 @@ const style: CaptionStyle = {
   fontFamily: 'Arial', fontSizePct: 5, textColor: '#FFFFFF',
   background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
   outline: { enabled: false, color: '#000000' },
+  highlight: { enabled: false, color: '#FDE047' },
   position: 'bottom', verticalOffsetPct: 5,
 };
 
@@ -19,6 +20,8 @@ describe('validateStyle', () => {
     expect(() => validateStyle({ ...style, position: 'left' })).toThrow();
     expect(() => validateStyle({ ...style, fontSizePct: 90 })).toThrow();
     expect(() => validateStyle({ ...style, textColor: 'red' })).toThrow();
+    expect(() => validateStyle({ ...style, highlight: undefined })).toThrow();
+    expect(() => validateStyle({ ...style, highlight: { enabled: true, color: 'gold' } })).toThrow();
     expect(() => validateStyle(null)).toThrow();
   });
 });
