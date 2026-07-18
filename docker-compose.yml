@@ -1,0 +1,14 @@
+# Local/VPS deployment: docker compose up --build
+# Frontend is expected on Vercel (set NEXT_PUBLIC_API_URL there);
+# for an all-in-one VPS you can add a frontend service later.
+services:
+  backend:
+    build: .
+    ports:
+      - '4000:7860'
+    environment:
+      - ALLOWED_ORIGINS=http://localhost:3000
+      - WHISPER_MODEL=base
+      - MAX_UPLOAD_MB=500
+      - JOB_TTL_MS=3600000
+    restart: unless-stopped

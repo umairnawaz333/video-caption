@@ -1,3 +1,13 @@
+---
+title: Captionly API
+emoji: 🎬
+colorFrom: indigo
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Captionly — AI Video Captioning (100% free & local)
 
 Upload a video → local Whisper AI generates English captions → style them with a
@@ -9,7 +19,7 @@ no paid APIs. Files are auto-deleted after download (1-hour TTL backstop).
 - **frontend/** Next.js + React + Tailwind — dashboard, style controls, live preview
 - **backend/** NestJS — upload (Multer), FFmpeg pipeline, ASS subtitle generation
 - **transcriber/** Python + [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — local speech-to-text
-- **fonts/** OFL-licensed caption fonts (Anton, Bangers) used by FFmpeg at burn time
+- **fonts/** OFL-licensed caption fonts used by FFmpeg at burn time
 
 Non-English speech is translated to English captions by Whisper itself (free).
 
@@ -37,6 +47,30 @@ Non-English speech is translated to English captions by Whisper itself (free).
 | `PYTHON_BIN` | `python3` | python with faster-whisper installed |
 | `MAX_UPLOAD_MB` | `500` | upload size limit |
 | `JOB_TTL_MS` | `3600000` | temp-file sweeper TTL |
+| `PORT` | `4000` | backend HTTP port (Docker image defaults to 7860) |
+| `ALLOWED_ORIGINS` | `http://localhost:3000` | comma-separated CORS origins for the frontend |
+
+## Deployment
+
+The backend ships as a single Docker image (Node + FFmpeg + Whisper, model baked
+in). The YAML block at the top of this file configures Hugging Face Spaces.
+
+**Backend on Hugging Face Spaces (free, no card):**
+
+1. Create a free account at huggingface.co, then **New Space** → SDK: **Docker** → Blank.
+2. Push this repo to the Space:
+
+       git remote add space https://huggingface.co/spaces/<your-hf-user>/captionly-api
+       git push space main
+
+3. In the Space **Settings → Variables**, set
+   `ALLOWED_ORIGINS=https://<your-app>.vercel.app`.
+4. The API goes live at `https://<your-hf-user>-captionly-api.hf.space`.
+
+**Frontend on Vercel:** import the repo, set root directory to `frontend/`, and
+add env var `NEXT_PUBLIC_API_URL=https://<your-hf-user>-captionly-api.hf.space`.
+
+**Any VPS:** `docker compose up --build` (see `docker-compose.yml`).
 
 ## Tests
 
