@@ -1,13 +1,19 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { downloadUrl, exportJob, getJob, patchTranscript } from '@/lib/api';
-import type { CaptionStyle, Segment } from '@/lib/types';
+import type { CaptionStyle, CaptionTrack } from '@/lib/types';
 
 type State = 'idle' | 'exporting' | 'done' | 'downloaded' | 'error';
 
 export default function ExportBar({
-  jobId, style, segments, onReset,
-}: { jobId: string; style: CaptionStyle; segments: Segment[]; onReset: () => void }) {
+  jobId, style, tracks, languages, onReset,
+}: {
+  jobId: string;
+  style: CaptionStyle;
+  tracks: CaptionTrack[];             // all tracks, for saving edits
+  languages: string[];                // displayed tracks (1-2), top line first
+  onReset: () => void;
+}) {
   const [state, setState] = useState<State>('idle');
   const [error, setError] = useState('');
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
@@ -18,8 +24,10 @@ export default function ExportBar({
     setState('exporting');
     setError('');
     try {
-      await patchTranscript(jobId, segments);
-      await exportJob(jobId, style);
+      for (const track of tracks) {
+        await patchTranscript(jobId, track.segments, track.language);
+      }
+      await exportJob(jobId, style, languages);
       timer.current = setInterval(async () => {
         const job = await getJob(jobId).catch(() => null);
         if (!job) return;

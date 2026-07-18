@@ -1,18 +1,20 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import CaptionOverlay from './CaptionOverlay';
+import LanguagePanel from './LanguagePanel';
 import StyleControls from './StyleControls';
 import TranscriptEditor from './TranscriptEditor';
 import ExportBar from './ExportBar';
 import { videoUrl } from '@/lib/api';
 import { PRESETS } from '@/lib/presets';
-import type { CaptionStyle, PublicJob, Segment } from '@/lib/types';
+import type { CaptionStyle, CaptionTrack, PublicJob } from '@/lib/types';
 
 export default function Studio({ job, onReset }: { job: PublicJob; onReset: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<CaptionStyle>({ ...PRESETS[0].style });
-  const [segments, setSegments] = useState<Segment[]>(job.tracks[0]?.segments ?? []);
+  const [tracks, setTracks] = useState<CaptionTrack[]>(job.tracks);
+  const [shown, setShown] = useState<string[]>([job.tracks[0]?.language ?? 'en']);
   const [currentTime, setCurrentTime] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
 
@@ -39,9 +41,23 @@ export default function Studio({ job, onReset }: { job: PublicJob; onReset: () =
     if (videoRef.current) videoRef.current.currentTime = t;
   };
 
+  const setTrackSegments = (language: string, segments: CaptionTrack['segments']) =>
+    setTracks((prev) => prev.map((t) => (t.language === language ? { ...t, segments } : t)));
+
+  const shownTracks = shown
+    .map((code) => tracks.find((t) => t.language === code))
+    .filter((t): t is CaptionTrack => t !== undefined);
+
   return (
     <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
-      <aside className="rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+      <aside className="space-y-8 rounded-2xl border border-slate-800 bg-slate-900/50 p-5">
+        <LanguagePanel
+          jobId={job.id}
+          trackLangs={tracks.map((t) => t.language)}
+          shown={shown}
+          onShownChange={setShown}
+          onJobUpdate={(j) => setTracks(j.tracks)}
+        />
         <StyleControls style={style} onChange={setStyle} />
       </aside>
 
@@ -52,13 +68,13 @@ export default function Studio({ job, onReset }: { job: PublicJob; onReset: () =
             className="max-h-[60vh] w-auto max-w-full"
           />
           <CaptionOverlay
-            segments={segments} style={style}
+            tracks={shownTracks} style={style}
             currentTime={currentTime} containerHeight={containerHeight}
           />
         </div>
 
-        <ExportBar jobId={job.id} style={style} segments={segments} onReset={onReset} />
-        <TranscriptEditor segments={segments} onChange={setSegments} onSeek={seek} currentTime={currentTime} />
+        <ExportBar jobId={job.id} style={style} tracks={tracks} languages={shown} onReset={onReset} />
+        <TranscriptEditor tracks={tracks} onChange={setTrackSegments} onSeek={seek} currentTime={currentTime} />
       </section>
     </div>
   );

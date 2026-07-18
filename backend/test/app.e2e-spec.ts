@@ -5,6 +5,7 @@ import * as fs from 'fs';
 import { AppModule } from '../src/app.module';
 import { FfmpegService } from '../src/processing/ffmpeg.service';
 import { TranscriptionService } from '../src/processing/transcription.service';
+import { TranslationService } from '../src/processing/translation.service';
 import { JobsService } from '../src/jobs/jobs.service';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -28,6 +29,14 @@ describe('upload → transcribe flow (e2e, stubbed processors)', () => {
           language: 'en',
           segments: [{ start: 0, end: 1, text: 'hello world' }],
         }),
+      })
+      .overrideProvider(TranslationService)
+      .useValue({
+        listLanguages: async () => [
+          { code: 'ur', name: 'Urdu', installed: true },
+          { code: 'es', name: 'Spanish', installed: false },
+        ],
+        translate: async (texts: string[], to: string) => texts.map((t) => `${to.toUpperCase()}:${t}`),
       })
       .compile();
 
@@ -132,4 +141,74 @@ describe('upload → transcribe flow (e2e, stubbed processors)', () => {
       .send({ style: { fontFamily: 'Wingdings' } })
       .expect(400);
   });
+  it('lists languages, translates to urdu, edits urdu, exports both', async () => {
+    const up = await request(app.getHttpServer())
+      .post('/api/upload')
+      .attach('file', Buffer.from('fake'), { filename: 'ml.mp4', contentType: 'video/mp4' })
+      .expect(201);
+    const id = up.body.jobId;
+    let job: any;
+    for (let i = 0; i < 50; i++) {
+      job = (await request(app.getHttpServer()).get(`/api/jobs/${id}`)).body;
+      if (job.status === 'ready') break;
+      await sleep(100);
+    }
+
+    const langs = await request(app.getHttpServer()).get('/api/languages').expect(200);
+    expect(langs.body).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: 'ur', name: 'Urdu' })]),
+    );
+
+    await request(app.getHttpServer())
+      .post(`/api/jobs/${id}/translate`).send({ language: 'ur' }).expect(202);
+    for (let i = 0; i < 50; i++) {
+      job = (await request(app.getHttpServer()).get(`/api/jobs/${id}`)).body;
+      if (job.tracks.length === 2 && !job.translating) break;
+      await sleep(100);
+    }
+    expect(job.tracks[1].language).toBe('ur');
+    expect(job.tracks[1].segments[0].text).toBe('UR:hello world');
+    expect(job.tracks[1].segments[0].start).toBe(0);
+
+    // duplicate + unknown language rejections
+    await request(app.getHttpServer())
+      .post(`/api/jobs/${id}/translate`).send({ language: 'ur' }).expect(400);
+    await request(app.getHttpServer())
+      .post(`/api/jobs/${id}/translate`).send({ language: 'xx' }).expect(400);
+
+    // edit the urdu track only
+    const urSeg = { ...job.tracks[1].segments[0], text: 'UR:edited' };
+    const patched = await request(app.getHttpServer())
+      .patch(`/api/jobs/${id}/transcript`)
+      .send({ segments: [urSeg], language: 'ur' })
+      .expect(200);
+    expect(patched.body.tracks[1].segments[0].text).toBe('UR:edited');
+    expect(patched.body.tracks[0].segments[0].text).toBe('hello world');
+
+    // export with both languages (urdu on top)
+    const style = {
+      fontFamily: 'Arial', fontSizePct: 5, textColor: '#FFFFFF',
+      uppercase: false, bold: false, singleWord: false,
+      background: { enabled: true, color: '#000000', opacity: 0.6, rounded: true },
+      outline: { enabled: false, color: '#000000' },
+      highlight: { enabled: false, color: '#FDE047', mode: 'color' },
+      wordLagSec: 0,
+      position: 'bottom', verticalOffsetPct: 5,
+    };
+    await request(app.getHttpServer())
+      .post(`/api/jobs/${id}/export`).send({ style, languages: ['ur', 'en'] }).expect(202);
+    for (let i = 0; i < 50; i++) {
+      job = (await request(app.getHttpServer()).get(`/api/jobs/${id}`)).body;
+      if (job.status === 'done') break;
+      await sleep(100);
+    }
+    expect(job.status).toBe('done');
+
+    // bad language lists rejected
+    await request(app.getHttpServer())
+      .post(`/api/jobs/${id}/export`).send({ style, languages: ['fr'] }).expect(400);
+    await request(app.getHttpServer())
+      .post(`/api/jobs/${id}/export`).send({ style, languages: ['en', 'en'] }).expect(400);
+  });
+
 });

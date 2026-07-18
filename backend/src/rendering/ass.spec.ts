@@ -1,4 +1,4 @@
-import { generateAss, hexToAssColor, formatAssTime, escapeAssText } from './ass';
+import { generateAss, generateAssTracks, hexToAssColor, formatAssTime, escapeAssText } from './ass';
 import { CaptionStyle, Segment } from '../jobs/types';
 
 const baseStyle: CaptionStyle = {
@@ -198,5 +198,65 @@ describe('generateAss word lag (sync tuning)', () => {
     const events = big.split('\n').filter((l) => l.startsWith('Dialogue:'));
     // 0.6 + 0.5 = 1.1 clamps to chunk end 1.0
     expect(events[2]).toContain('Dialogue: 0,0:00:01.00,0:00:01.00');
+  });
+});
+
+describe('generateAssTracks (multi-language)', () => {
+  const en: Segment[] = [
+    {
+      id: 'e1', start: 0, end: 1.0, text: 'hello world',
+      words: [
+        { start: 0, end: 0.5, text: 'hello' },
+        { start: 0.5, end: 1.0, text: 'world' },
+      ],
+    },
+  ];
+  const ur: Segment[] = [{ id: 'u1', start: 0, end: 1.0, text: 'ہیلو دنیا' }];
+
+  it('matches generateAss exactly for a single track', () => {
+    const one = generateAssTracks([{ segments: en }], baseStyle, video);
+    expect(one).toBe(generateAss(en, baseStyle, video));
+  });
+
+  it('emits one style per track with font override and stacked lines', () => {
+    const ass = generateAssTracks(
+      [{ segments: ur, fontFamily: 'Noto Nastaliq Urdu' }, { segments: en }],
+      baseStyle, video,
+    );
+    expect(ass).toMatch(/Style: Caption,Noto Nastaliq Urdu,54,/);
+    expect(ass).toMatch(/Style: Caption2,Arial,54,/);
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(1);
+    // top line = first track (urdu), bottom line = second (english)
+    expect(events[0]).toContain('{\\rCaption}ہیلو دنیا\\N{\\rCaption2}hello world');
+  });
+
+  it('karaoke-splits only the track that has words; other line stays static', () => {
+    const style: CaptionStyle = {
+      ...baseStyle,
+      highlight: { enabled: true, color: '#FFD700', mode: 'color' },
+    };
+    const ass = generateAssTracks(
+      [{ segments: ur, fontFamily: 'Noto Nastaliq Urdu' }, { segments: en }],
+      style, video,
+    );
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(2); // one per english word
+    for (const e of events) expect(e).toContain('ہیلو دنیا');
+    expect(events[0]).toContain('{\\1c&H00D7FF&}hello{\\1c&HFFFFFF&} world');
+    expect(events[1]).toContain('hello {\\1c&H00D7FF&}world{\\1c&HFFFFFF&}');
+    expect(events[0]).toContain('Dialogue: 0,0:00:00.00,0:00:00.50');
+    expect(events[1]).toContain('Dialogue: 0,0:00:00.50,0:00:01.00');
+  });
+
+  it('uses the plain-track timings when no track has words', () => {
+    const plainEn: Segment[] = [{ id: 'p1', start: 2, end: 3, text: 'plain' }];
+    const ass = generateAssTracks(
+      [{ segments: plainEn }, { segments: ur, fontFamily: 'Noto Nastaliq Urdu' }],
+      baseStyle, video,
+    );
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain('Dialogue: 0,0:00:02.00,0:00:03.00');
   });
 });

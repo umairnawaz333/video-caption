@@ -32,11 +32,15 @@ export interface CaptionStyle {
   verticalOffsetPct: number;
 }
 
+export interface LanguageInfo { code: string; name: string; installed: boolean }
+
 export interface PublicJob {
   id: string;
   status: JobStatus;
   error?: string;
   progress?: number;            // 0-100 within the current long-running step
+  translating?: string | null;  // language code currently being translated
+  translateError?: string;
   video?: VideoMeta;
   tracks: CaptionTrack[];
   createdAt: number;

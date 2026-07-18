@@ -37,6 +37,8 @@ export interface Job {
   status: JobStatus;
   error?: string;
   progress?: number;            // 0-100 within the current long-running step
+  translating?: string | null;  // language code currently being translated
+  translateError?: string;      // last translation failure, cleared on retry
   video?: VideoMeta;
   tracks: CaptionTrack[];       // v1: exactly one, language 'en'
   createdAt: number;

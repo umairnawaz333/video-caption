@@ -26,7 +26,10 @@ export class JobsController {
   }
 
   @Patch(':id/transcript')
-  patchTranscript(@Param('id') id: string, @Body() body: { segments: Segment[] }) {
+  patchTranscript(
+    @Param('id') id: string,
+    @Body() body: { segments: Segment[]; language?: string },
+  ) {
     const job = this.find(id);
     if (!Array.isArray(body?.segments)) throw new BadRequestException('segments must be an array');
     for (const s of body.segments) {
@@ -37,8 +40,11 @@ export class JobsController {
         throw new BadRequestException('invalid segment');
       }
     }
-    if (!job.tracks[0]) throw new BadRequestException('transcript not ready');
-    job.tracks[0].segments = body.segments;
+    const track = body.language
+      ? job.tracks.find((t) => t.language === body.language)
+      : job.tracks[0];
+    if (!track) throw new BadRequestException('transcript not ready');
+    track.segments = body.segments;
     return this.jobs.toPublic(job);
   }
 

@@ -1,4 +1,4 @@
-import type { CaptionStyle, PublicJob, Segment } from './types';
+import type { CaptionStyle, LanguageInfo, PublicJob, Segment } from './types';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -38,18 +38,28 @@ async function json<T>(res: Response): Promise<T> {
 export const getJob = (id: string) =>
   fetch(`${BASE}/api/jobs/${id}`).then((r) => json<PublicJob>(r));
 
-export const patchTranscript = (id: string, segments: Segment[]) =>
+export const getLanguages = () =>
+  fetch(`${BASE}/api/languages`).then((r) => json<LanguageInfo[]>(r));
+
+export const translateJob = (id: string, language: string) =>
+  fetch(`${BASE}/api/jobs/${id}/translate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ language }),
+  }).then((r) => json<{ ok: boolean }>(r));
+
+export const patchTranscript = (id: string, segments: Segment[], language?: string) =>
   fetch(`${BASE}/api/jobs/${id}/transcript`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ segments }),
+    body: JSON.stringify({ segments, language }),
   }).then((r) => json<PublicJob>(r));
 
-export const exportJob = (id: string, style: CaptionStyle) =>
+export const exportJob = (id: string, style: CaptionStyle, languages?: string[]) =>
   fetch(`${BASE}/api/jobs/${id}/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ style }),
+    body: JSON.stringify({ style, languages }),
   }).then((r) => json<{ ok: boolean }>(r));
 
 export const videoUrl = (id: string) => `${BASE}/api/jobs/${id}/video`;

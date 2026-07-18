@@ -4,8 +4,9 @@ import * as path from 'path';
 import { config } from '../config';
 import { JobsService } from '../jobs/jobs.service';
 import { FfmpegService } from '../processing/ffmpeg.service';
-import { CaptionStyle } from '../jobs/types';
-import { generateAss } from './ass';
+import { CaptionStyle, Job } from '../jobs/types';
+import { AssTrack, generateAssTracks } from './ass';
+import { LANG_RENDER } from './langfonts';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const FONTS = [
@@ -37,27 +38,47 @@ export function validateStyle(input: unknown): CaptionStyle {
   return s;
 }
 
+/** Display-order language list for export: 1-2 codes, each an existing track. */
+export function validateLanguages(job: Job, input: unknown): string[] {
+  if (input === undefined) return [job.tracks[0].language];
+  const langs = input as string[];
+  const ok =
+    Array.isArray(langs) &&
+    langs.length >= 1 && langs.length <= 2 &&
+    langs.every((l) => typeof l === 'string') &&
+    new Set(langs).size === langs.length &&
+    langs.every((l) => job.tracks.some((t) => t.language === l));
+  if (!ok) throw new BadRequestException('invalid caption languages');
+  return langs;
+}
+
 @Injectable()
 export class RenderingService {
   private logger = new Logger(RenderingService.name);
 
   constructor(private jobs: JobsService, private ffmpeg: FfmpegService) {}
 
-  async export(jobId: string, style: CaptionStyle): Promise<void> {
+  async export(jobId: string, style: CaptionStyle, languages?: string[]): Promise<void> {
     const job = this.jobs.get(jobId);
     if (!job) throw new BadRequestException('job not found');
     if (!['ready', 'done'].includes(job.status) || !job.video || !job.tracks[0]) {
       throw new BadRequestException('job is not ready for export');
     }
+    const langs = validateLanguages(job, languages);
     const input = fs.readdirSync(job.dir).find((f) => f.startsWith('input'));
     if (!input) throw new BadRequestException('input video missing');
 
     this.jobs.update(jobId, { status: 'rendering' });
     try {
+      const tracks: AssTrack[] = langs.map((lang) => ({
+        segments: job.tracks.find((t) => t.language === lang)!.segments,
+        fontFamily: LANG_RENDER[lang]?.font,
+        fontScale: LANG_RENDER[lang]?.scale,
+      }));
       const assPath = path.join(job.dir, 'captions.ass');
       fs.writeFileSync(
         assPath,
-        generateAss(job.tracks[0].segments, style, {
+        generateAssTracks(tracks, style, {
           width: job.video.width,
           height: job.video.height,
         }),

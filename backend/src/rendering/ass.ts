@@ -24,8 +24,25 @@ export function escapeAssText(text: string): string {
 
 const ALIGN: Record<CaptionStyle['position'], number> = { bottom: 2, middle: 5, top: 8 };
 
+const styleName = (trackIdx: number) => (trackIdx === 0 ? 'Caption' : `Caption${trackIdx + 1}`);
+
+/** One caption track to render; order in the array = line order, top first. */
+export interface AssTrack {
+  segments: Segment[];
+  fontFamily?: string; // per-script override (e.g. Noto Nastaliq Urdu); defaults to style font
+  fontScale?: number;  // size multiplier for small-glyph scripts (default 1)
+}
+
 export function generateAss(
   segments: Segment[],
+  style: CaptionStyle,
+  video: { width: number; height: number },
+): string {
+  return generateAssTracks([{ segments }], style, video);
+}
+
+export function generateAssTracks(
+  tracks: AssTrack[],
   style: CaptionStyle,
   video: { width: number; height: number },
 ): string {
@@ -58,7 +75,10 @@ export function generateAss(
     '',
     '[V4+ Styles]',
     'Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding',
-    `Style: Caption,${style.fontFamily},${fontSize},${primary},${primary},${outlineColor},${outlineColor},${style.bold ? -1 : 0},0,0,0,100,100,0,0,${borderStyle},${outlineWidth},0,${ALIGN[style.position]},60,60,${marginV},1`,
+    ...tracks.map(
+      (t, i) =>
+        `Style: ${styleName(i)},${t.fontFamily ?? style.fontFamily},${Math.round(fontSize * (t.fontScale ?? 1))},${primary},${primary},${outlineColor},${outlineColor},${style.bold ? -1 : 0},0,0,0,100,100,0,0,${borderStyle},${outlineWidth},0,${ALIGN[style.position]},60,60,${marginV},1`,
+    ),
     '',
     '[Events]',
     'Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text',
@@ -87,20 +107,43 @@ export function generateAss(
     i === s.words!.length - 1 ? s.end : lagged(s, i + 1),
   ];
 
-  const events = segments.flatMap((s) => {
+  // the "driver" track carries word timings and drives event timing; other
+  // tracks (translations, which share chunk timings) render as static lines
+  const multi = tracks.length > 1;
+  const driverIdx = Math.max(
+    0,
+    tracks.findIndex((t) => t.segments.some((s) => s.words && s.words.length > 0)),
+  );
+  const driver = tracks[driverIdx];
+  const prefix = (ti: number) => (multi ? `{\\r${styleName(ti)}}` : '');
+
+  // full event text for chunk si, with the driver track's line swapped in
+  const assemble = (si: number, driverLine: string): string =>
+    tracks
+      .map((t, ti) => {
+        if (ti === driverIdx) return prefix(ti) + driverLine;
+        const seg = t.segments[si];
+        return seg ? prefix(ti) + tx(seg.text) : null;
+      })
+      .filter((l): l is string => l !== null)
+      .join('\\N');
+
+  const events = driver.segments.flatMap((s, si) => {
     const hasWords = !!s.words && s.words.length > 0;
 
     // one word at a time, big
     if (style.singleWord && hasWords) {
-      return s.words!.map((w, i) => event(...wordSpan(s, i), tx(w.text)));
+      return s.words!.map((w, i) => event(...wordSpan(s, i), assemble(si, tx(w.text))));
     }
 
-    if (!style.highlight.enabled || !hasWords) return [event(s.start, s.end, tx(s.text))];
+    if (!style.highlight.enabled || !hasWords) {
+      return [event(s.start, s.end, assemble(si, tx(s.text)))];
+    }
 
     // karaoke: one event per word; the active word is tinted ('color') or
     // wrapped in a thick colored stroke ('box'), the rest stay unchanged
     return s.words!.map((_, i) => {
-      const text = s.words!
+      const line = s.words!
         .map((w, j) => {
           if (j !== i) return tx(w.text);
           return style.highlight.mode === 'box'
@@ -108,7 +151,7 @@ export function generateAss(
             : `${highlightTag}${tx(w.text)}${primaryTag}`;
         })
         .join(' ');
-      return event(...wordSpan(s, i), text);
+      return event(...wordSpan(s, i), assemble(si, line));
     });
   });
 

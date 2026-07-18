@@ -6,7 +6,7 @@ import type { Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { JobsService } from '../jobs/jobs.service';
-import { RenderingService, validateStyle } from './rendering.service';
+import { RenderingService, validateLanguages, validateStyle } from './rendering.service';
 
 @Controller('jobs')
 export class RenderingController {
@@ -14,14 +14,15 @@ export class RenderingController {
 
   @Post(':id/export')
   @HttpCode(202)
-  export(@Param('id') id: string, @Body() body: { style: unknown }) {
+  export(@Param('id') id: string, @Body() body: { style: unknown; languages?: unknown }) {
     const style = validateStyle(body?.style);
     const job = this.jobs.get(id);
     if (!job) throw new NotFoundException('Job not found');
     if (!['ready', 'done'].includes(job.status)) {
       throw new BadRequestException('transcript is not ready yet');
     }
-    void this.rendering.export(id, style); // async; client polls GET /jobs/:id
+    const languages = validateLanguages(job, body?.languages);
+    void this.rendering.export(id, style, languages); // async; client polls GET /jobs/:id
     return { ok: true };
   }
 
