@@ -48,6 +48,10 @@ export const translateJob = (id: string, language: string) =>
     body: JSON.stringify({ language }),
   }).then((r) => json<{ ok: boolean }>(r));
 
+export const deleteTrack = (id: string, language: string) =>
+  fetch(`${BASE}/api/jobs/${id}/tracks/${language}`, { method: 'DELETE' })
+    .then((r) => json<PublicJob>(r));
+
 export const patchTranscript = (id: string, segments: Segment[], language?: string) =>
   fetch(`${BASE}/api/jobs/${id}/transcript`, {
     method: 'PATCH',

@@ -209,6 +209,15 @@ describe('upload → transcribe flow (e2e, stubbed processors)', () => {
       .post(`/api/jobs/${id}/export`).send({ style, languages: ['fr'] }).expect(400);
     await request(app.getHttpServer())
       .post(`/api/jobs/${id}/export`).send({ style, languages: ['en', 'en'] }).expect(400);
+
+    // the translated track can be removed; the original cannot
+    await request(app.getHttpServer())
+      .delete(`/api/jobs/${id}/tracks/en`).expect(400);
+    const afterDelete = await request(app.getHttpServer())
+      .delete(`/api/jobs/${id}/tracks/ur`).expect(200);
+    expect(afterDelete.body.tracks).toHaveLength(1);
+    await request(app.getHttpServer())
+      .delete(`/api/jobs/${id}/tracks/ur`).expect(404);
   });
 
 });

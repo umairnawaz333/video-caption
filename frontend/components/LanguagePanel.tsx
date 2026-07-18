@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { getJob, getLanguages, translateJob } from '@/lib/api';
+import { deleteTrack, getJob, getLanguages, translateJob } from '@/lib/api';
 import type { LanguageInfo, PublicJob } from '@/lib/types';
 
 /**
@@ -58,6 +58,16 @@ export default function LanguagePanel({
     }
   }
 
+  async function handleRemove(code: string) {
+    setError('');
+    try {
+      const job = await deleteTrack(jobId, code);
+      onJobUpdate(job); // Studio drops it from `shown` if displayed
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
   function toggleShown(code: string) {
     if (shown.includes(code)) {
       if (shown.length > 1) onShownChange(shown.filter((c) => c !== code)); // keep min 1
@@ -75,22 +85,35 @@ export default function LanguagePanel({
       </h3>
 
       <div className="flex flex-wrap gap-2">
-        {trackLangs.map((code) => {
+        {trackLangs.map((code, i) => {
           const active = shown.includes(code);
           const order = shown.indexOf(code);
           return (
-            <button
+            <span
               key={code}
-              onClick={() => toggleShown(code)}
-              title={active ? 'Click to hide' : 'Click to show'}
-              className={`rounded-lg border px-3 py-1.5 text-sm transition
+              className={`flex items-center overflow-hidden rounded-lg border text-sm transition
                 ${active ? 'border-indigo-400 bg-indigo-500/15 text-indigo-300' : 'border-slate-700 text-slate-400 hover:border-slate-500'}`}
             >
-              {active && shown.length === 2 && (
-                <span className="mr-1.5 font-mono text-xs opacity-70">{order === 0 ? '↑' : '↓'}</span>
+              <button
+                onClick={() => toggleShown(code)}
+                title={active ? 'Click to hide' : 'Click to show'}
+                className="px-3 py-1.5"
+              >
+                {active && shown.length === 2 && (
+                  <span className="mr-1.5 font-mono text-xs opacity-70">{order === 0 ? '↑' : '↓'}</span>
+                )}
+                {nameOf(code)}
+              </button>
+              {i > 0 && (
+                <button
+                  onClick={() => void handleRemove(code)}
+                  title="Remove this language"
+                  className="-ml-1 px-2 py-1.5 text-slate-500 hover:text-red-400"
+                >
+                  ✕
+                </button>
               )}
-              {nameOf(code)}
-            </button>
+            </span>
           );
         })}
         {shown.length === 2 && (

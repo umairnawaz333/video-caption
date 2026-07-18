@@ -56,7 +56,14 @@ export default function Studio({ job, onReset }: { job: PublicJob; onReset: () =
           trackLangs={tracks.map((t) => t.language)}
           shown={shown}
           onShownChange={setShown}
-          onJobUpdate={(j) => setTracks(j.tracks)}
+          onJobUpdate={(j) => {
+            setTracks(j.tracks);
+            // drop displayed languages whose track no longer exists; never go empty
+            setShown((prev) => {
+              const kept = prev.filter((code) => j.tracks.some((t) => t.language === code));
+              return kept.length > 0 ? kept : [j.tracks[0]?.language ?? 'en'];
+            });
+          }}
         />
         <StyleControls style={style} onChange={setStyle} />
       </aside>

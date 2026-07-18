@@ -1,5 +1,5 @@
 import {
-  BadRequestException, Body, Controller, Get, NotFoundException,
+  BadRequestException, Body, Controller, Delete, Get, NotFoundException,
   Param, Patch, Res,
 } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -45,6 +45,22 @@ export class JobsController {
       : job.tracks[0];
     if (!track) throw new BadRequestException('transcript not ready');
     track.segments = body.segments;
+    return this.jobs.toPublic(job);
+  }
+
+  @Delete(':id/tracks/:language')
+  deleteTrack(@Param('id') id: string, @Param('language') language: string) {
+    const job = this.find(id);
+    if (!job.tracks[0]) throw new BadRequestException('transcript not ready');
+    if (job.tracks[0].language === language) {
+      throw new BadRequestException('the original transcript cannot be removed');
+    }
+    if (job.translating === language) {
+      throw new BadRequestException('this translation is still running');
+    }
+    const idx = job.tracks.findIndex((t) => t.language === language);
+    if (idx === -1) throw new NotFoundException('no such caption track');
+    job.tracks.splice(idx, 1);
     return this.jobs.toPublic(job);
   }
 
