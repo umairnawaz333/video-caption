@@ -1,0 +1,17 @@
+# Render Blueprint: creates the backend as a free Docker web service.
+# Dashboard → New → Blueprint → select this repo → Apply.
+services:
+  - type: web
+    name: captionly-api
+    runtime: docker
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: WHISPER_MODEL
+        value: tiny          # 512MB free instance; use base/small on bigger plans
+      - key: MAX_UPLOAD_MB
+        value: '200'
+      - key: JOB_TTL_MS
+        value: '3600000'
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:3000   # replaced with the Vercel URL after frontend deploy

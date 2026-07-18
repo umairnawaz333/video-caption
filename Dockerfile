@@ -16,10 +16,10 @@ RUN python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install --no-cache-dir -r transcriber/requirements.txt
 COPY transcriber transcriber
 
-# bake the whisper model into the image so the first request has no download
+# bake whisper models into the image so the first request has no download
+# (tiny for 512MB-RAM hosts like Render free, base for anything bigger)
 ENV HF_HOME=/app/.cache
-ARG WHISPER_MODEL=base
-RUN /opt/venv/bin/python -c "from faster_whisper import WhisperModel; WhisperModel('${WHISPER_MODEL}', device='cpu', compute_type='int8')"
+RUN /opt/venv/bin/python -c "from faster_whisper import WhisperModel; WhisperModel('tiny', device='cpu', compute_type='int8'); WhisperModel('base', device='cpu', compute_type='int8')"
 
 # backend
 COPY backend/package*.json backend/
@@ -35,7 +35,7 @@ ENV NODE_ENV=production \
     TRANSCRIBER_SCRIPT=/app/transcriber/transcribe.py \
     FONTS_DIR=/app/fonts \
     TMP_ROOT=/app/tmp \
-    WHISPER_MODEL=${WHISPER_MODEL} \
+    WHISPER_MODEL=base \
     PORT=7860
 
 # HF Spaces runs the container as a non-root user (uid 1000)
