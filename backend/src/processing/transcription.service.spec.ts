@@ -40,10 +40,10 @@ print("model exploded", file=sys.stderr); sys.exit(3)`);
 print("PROGRESS 25", file=sys.stderr, flush=True)
 print("PROGRESS 80", file=sys.stderr, flush=True)
 print("some other log line", file=sys.stderr, flush=True)
-json.dump({"language":"en","segments":[]}, sys.stdout)`);
+json.dump({"language":"ur","segments":[]}, sys.stdout)`);
     const seen: number[] = [];
     const result = await makeService(fake).transcribe('/any/audio.wav', (pct) => seen.push(pct));
-    expect(result.language).toBe('en');
+    expect(result.language).toBe('ur');
     expect(seen).toEqual([25, 80]);
   });
 });

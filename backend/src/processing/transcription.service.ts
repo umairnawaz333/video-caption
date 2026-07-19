@@ -4,10 +4,8 @@ import { config } from '../config';
 import { RawSegment } from './chunk';
 
 export interface TranscriptResult {
-  language: string;
-  segments: RawSegment[]; // always English text
-  // native-language transcript for non-English audio (word timings included)
-  native?: { language: string; segments: RawSegment[] } | null;
+  language: string;       // detected source language
+  segments: RawSegment[]; // always English text (single translate pass)
 }
 
 @Injectable()
