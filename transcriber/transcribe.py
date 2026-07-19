@@ -3,8 +3,12 @@
 
 Prints JSON to stdout:
 {"language": str, "segments": [{"start", "end", "text",
-                                "words": [{"start", "end", "text"}]}]}
-Non-English audio is re-run with task=translate so output text is English.
+                                "words": [{"start", "end", "text"}]}],
+ "native": {"language": str, "segments": [...]} | null}
+
+`segments` is always English. For non-English audio the first pass's
+native-language transcript (with word timings) is preserved in `native`
+and the audio is re-run with task=translate to produce the English text.
 """
 import argparse
 import json
@@ -62,13 +66,19 @@ def main() -> int:
     )
     segs = collect(segments, info)  # generator -> list (runs the model)
 
+    native = None
     if info.language != "en":
+        # keep the native-language transcript, then translate to English
+        native = {"language": info.language, "segments": serialize(segs)}
         segments, info = model.transcribe(
             args.audio, task="translate", vad_filter=True, word_timestamps=True
         )
         segs = collect(segments, info)
 
-    json.dump({"language": info.language, "segments": serialize(segs)}, sys.stdout)
+    json.dump(
+        {"language": info.language, "segments": serialize(segs), "native": native},
+        sys.stdout,
+    )
     return 0
 
 

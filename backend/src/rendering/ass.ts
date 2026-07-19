@@ -26,11 +26,15 @@ const ALIGN: Record<CaptionStyle['position'], number> = { bottom: 2, middle: 5, 
 
 const styleName = (trackIdx: number) => (trackIdx === 0 ? 'Caption' : `Caption${trackIdx + 1}`);
 
+/** Arabic/Hebrew/Syriac + presentation forms: text that libass would scramble if split. */
+export const hasRtlText = (text: string) => /[֐-ࣿיִ-﷿ﹰ-﻿]/.test(text);
+
 /** One caption track to render; order in the array = line order, top first. */
 export interface AssTrack {
   segments: Segment[];
   fontFamily?: string; // per-script override (e.g. Noto Nastaliq Urdu); defaults to style font
   fontScale?: number;  // size multiplier for small-glyph scripts (default 1)
+  rtl?: boolean;       // right-to-left script: never karaoke-split this track
 }
 
 export function generateAss(
@@ -108,13 +112,16 @@ export function generateAssTracks(
   ];
 
   // the "driver" track carries word timings and drives event timing; other
-  // tracks (translations, which share chunk timings) render as static lines
+  // tracks (translations, which share chunk timings) render as static lines.
+  // Prefer an LTR track with words — RTL lines cannot be karaoke-split.
   const multi = tracks.length > 1;
-  const driverIdx = Math.max(
-    0,
-    tracks.findIndex((t) => t.segments.some((s) => s.words && s.words.length > 0)),
-  );
+  const hasWords = (t: AssTrack) => t.segments.some((s) => s.words && s.words.length > 0);
+  let driverIdx = tracks.findIndex((t) => !t.rtl && hasWords(t));
+  if (driverIdx === -1) driverIdx = tracks.findIndex(hasWords);
+  if (driverIdx === -1) driverIdx = 0;
   const driver = tracks[driverIdx];
+  // RTL drivers may single-word (one word per event is order-safe) but never word-split
+  const canSplitWords = !driver.rtl;
   const prefix = (ti: number) => (multi ? `{\\r${styleName(ti)}}` : '');
 
   // full event text for chunk si, with the driver track's line swapped in
@@ -129,14 +136,15 @@ export function generateAssTracks(
       .join('\\N');
 
   const events = driver.segments.flatMap((s, si) => {
-    const hasWords = !!s.words && s.words.length > 0;
+    const segWords = !!s.words && s.words.length > 0;
 
-    // one word at a time, big
-    if (style.singleWord && hasWords) {
+    // one word at a time, big (safe for RTL: one word per event)
+    if (style.singleWord && segWords) {
       return s.words!.map((w, i) => event(...wordSpan(s, i), assemble(si, tx(w.text))));
     }
 
-    if (!style.highlight.enabled || !hasWords) {
+    // per-segment content guard: mislabeled tracks can carry RTL text
+    if (!style.highlight.enabled || !segWords || !canSplitWords || hasRtlText(s.text)) {
       return [event(s.start, s.end, assemble(si, tx(s.text)))];
     }
 

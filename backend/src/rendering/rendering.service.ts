@@ -6,7 +6,7 @@ import { JobsService } from '../jobs/jobs.service';
 import { FfmpegService } from '../processing/ffmpeg.service';
 import { CaptionStyle, Job } from '../jobs/types';
 import { AssTrack, generateAssTracks } from './ass';
-import { LANG_RENDER } from './langfonts';
+import { LANG_RENDER, RTL_LANGS } from './langfonts';
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const FONTS = [
@@ -74,6 +74,7 @@ export class RenderingService {
         segments: job.tracks.find((t) => t.language === lang)!.segments,
         fontFamily: LANG_RENDER[lang]?.font,
         fontScale: LANG_RENDER[lang]?.scale,
+        rtl: RTL_LANGS.has(lang),
       }));
       const assPath = path.join(job.dir, 'captions.ass');
       fs.writeFileSync(

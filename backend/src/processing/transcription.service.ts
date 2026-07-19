@@ -5,7 +5,9 @@ import { RawSegment } from './chunk';
 
 export interface TranscriptResult {
   language: string;
-  segments: RawSegment[];
+  segments: RawSegment[]; // always English text
+  // native-language transcript for non-English audio (word timings included)
+  native?: { language: string; segments: RawSegment[] } | null;
 }
 
 @Injectable()

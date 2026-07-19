@@ -33,15 +33,19 @@ export class PipelineService {
         this.jobs.update(jobId, { progress: pct }),
       );
 
-      this.jobs.update(jobId, {
-        status: 'ready',
-        progress: 100,
-        tracks: [{
-          language: 'en',
-          // short one-line chunks that flip quickly as speech flows
-          segments: chunkSegments(result.segments),
-        }],
-      });
+      const tracks = [{
+        language: 'en',
+        // short one-line chunks that flip quickly as speech flows
+        segments: chunkSegments(result.segments),
+      }];
+      // non-English audio: keep the native transcript as its own track
+      if (result.native && result.native.language !== 'en') {
+        tracks.push({
+          language: result.native.language,
+          segments: chunkSegments(result.native.segments),
+        });
+      }
+      this.jobs.update(jobId, { status: 'ready', progress: 100, tracks });
     } catch (e) {
       this.logger.error(`job ${jobId} failed`, e as Error);
       this.jobs.update(jobId, { status: 'error', error: (e as Error).message });

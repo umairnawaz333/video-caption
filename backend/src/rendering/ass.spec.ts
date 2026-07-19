@@ -260,3 +260,59 @@ describe('generateAssTracks (multi-language)', () => {
     expect(events[0]).toContain('Dialogue: 0,0:00:02.00,0:00:03.00');
   });
 });
+
+describe('generateAssTracks RTL safety', () => {
+  const arWords: Segment[] = [
+    {
+      id: 'a1', start: 0, end: 1.0, text: 'مرحبا بكم في تطبيق',
+      words: [
+        { start: 0, end: 0.25, text: 'مرحبا' },
+        { start: 0.25, end: 0.5, text: 'بكم' },
+        { start: 0.5, end: 0.75, text: 'في' },
+        { start: 0.75, end: 1.0, text: 'تطبيق' },
+      ],
+    },
+  ];
+  const enWords: Segment[] = [
+    {
+      id: 'e1', start: 0, end: 1.0, text: 'welcome to the app',
+      words: [
+        { start: 0, end: 0.5, text: 'welcome' },
+        { start: 0.5, end: 1.0, text: 'app' },
+      ],
+    },
+  ];
+  const hlStyle: CaptionStyle = {
+    ...baseStyle,
+    highlight: { enabled: true, color: '#FFD700', mode: 'color' },
+  };
+
+  it('never karaoke-splits an RTL driver: text stays whole', () => {
+    const ass = generateAssTracks([{ segments: arWords, rtl: true }], hlStyle, video);
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(1);
+    expect(events[0]).toContain('مرحبا بكم في تطبيق');
+    expect(events[0]).not.toContain('\\1c');
+  });
+
+  it('prefers the LTR words track as driver when both have words', () => {
+    const ass = generateAssTracks(
+      [{ segments: arWords, rtl: true }, { segments: enWords }],
+      hlStyle, video,
+    );
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(2); // one per ENGLISH word
+    for (const e of events) expect(e).toContain('مرحبا بكم في تطبيق'); // arabic static + intact
+    expect(events[0]).toContain('{\\1c&H00D7FF&}welcome{\\1c&HFFFFFF&}');
+  });
+
+  it('still allows single-word mode for an RTL driver', () => {
+    const ass = generateAssTracks(
+      [{ segments: arWords, rtl: true }],
+      { ...baseStyle, singleWord: true }, video,
+    );
+    const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
+    expect(events).toHaveLength(4);
+    expect(events[0]).toContain(',مرحبا');
+  });
+});

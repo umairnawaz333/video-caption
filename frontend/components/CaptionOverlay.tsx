@@ -2,27 +2,31 @@
 import {
   findActiveSegment, findActiveWordIndex, positionToCss, styleToCss, wordBoxCss,
 } from '@/lib/captionStyle';
-import { langLineCss } from '@/lib/languages';
+import { hasRtlText, langLineCss, RTL_LANGS } from '@/lib/languages';
 import type { CaptionStyle, CaptionTrack, Segment } from '@/lib/types';
 
 function WordLine({
-  segment, style, currentTime, containerHeight,
+  segment, style, currentTime, containerHeight, rtl,
 }: {
   segment: Segment;
   style: CaptionStyle;
   currentTime: number;
   containerHeight: number;
+  rtl: boolean;
 }) {
   const hasWords = !!segment.words && segment.words.length > 0;
   // wordLagSec delays the highlight to compensate for whisper's early word starts
   const wordIdx = hasWords ? findActiveWordIndex(segment, currentTime - style.wordLagSec) : -1;
 
-  // one word at a time, big
+  // one word at a time, big (safe for RTL: one word per tick)
   if (style.singleWord && wordIdx !== -1) {
     return <>{segment.words![wordIdx].text}</>;
   }
 
-  const highlightIdx = style.highlight.enabled ? wordIdx : -1;
+  // no word-highlight on RTL lines: the burned export can't karaoke-split
+  // right-to-left text, so the preview matches by rendering it whole
+  const highlightIdx =
+    style.highlight.enabled && !rtl && !hasRtlText(segment.text) ? wordIdx : -1;
   if (highlightIdx === -1) return <>{segment.text}</>;
 
   return (
@@ -79,6 +83,7 @@ export default function CaptionOverlay({
             style={style}
             currentTime={currentTime}
             containerHeight={containerHeight}
+            rtl={RTL_LANGS.has(language)}
           />
         </span>
       ))}

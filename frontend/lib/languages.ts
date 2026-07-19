@@ -3,6 +3,9 @@ import type { CSSProperties } from 'react';
 /** Right-to-left languages (direction + text alignment in preview/editor). */
 export const RTL_LANGS = new Set(['ar', 'fa', 'he', 'ur']);
 
+/** Arabic/Hebrew/Syriac + presentation forms: text the export can't karaoke-split. */
+export const hasRtlText = (text: string) => /[֐-ࣿיִ-﷿ﹰ-﻿]/.test(text);
+
 /**
  * Preview font + size boost per script, mirroring the backend's burn-time
  * overrides (langfonts.ts) so the preview matches the export.
