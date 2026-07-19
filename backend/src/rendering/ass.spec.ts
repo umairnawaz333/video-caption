@@ -214,14 +214,14 @@ describe('generateAssTracks (multi-language)', () => {
   const ur: Segment[] = [{ id: 'u1', start: 0, end: 1.0, text: 'ہیلو دنیا' }];
 
   it('matches generateAss exactly for a single track', () => {
-    const one = generateAssTracks([{ segments: en }], baseStyle, video);
+    const one = generateAssTracks([{ segments: en, style: baseStyle }], video);
     expect(one).toBe(generateAss(en, baseStyle, video));
   });
 
   it('emits one style per track with font override and stacked lines', () => {
     const ass = generateAssTracks(
-      [{ segments: ur, fontFamily: 'Noto Nastaliq Urdu' }, { segments: en }],
-      baseStyle, video,
+      [{ segments: ur, style: baseStyle, fontFamily: 'Noto Nastaliq Urdu' }, { segments: en, style: baseStyle }],
+      video,
     );
     expect(ass).toMatch(/Style: Caption,Noto Nastaliq Urdu,54,/);
     expect(ass).toMatch(/Style: Caption2,Arial,54,/);
@@ -237,8 +237,8 @@ describe('generateAssTracks (multi-language)', () => {
       highlight: { enabled: true, color: '#FFD700', mode: 'color' },
     };
     const ass = generateAssTracks(
-      [{ segments: ur, fontFamily: 'Noto Nastaliq Urdu' }, { segments: en }],
-      style, video,
+      [{ segments: ur, style, fontFamily: 'Noto Nastaliq Urdu' }, { segments: en, style }],
+      video,
     );
     const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
     expect(events).toHaveLength(2); // one per english word
@@ -252,8 +252,8 @@ describe('generateAssTracks (multi-language)', () => {
   it('uses the plain-track timings when no track has words', () => {
     const plainEn: Segment[] = [{ id: 'p1', start: 2, end: 3, text: 'plain' }];
     const ass = generateAssTracks(
-      [{ segments: plainEn }, { segments: ur, fontFamily: 'Noto Nastaliq Urdu' }],
-      baseStyle, video,
+      [{ segments: plainEn, style: baseStyle }, { segments: ur, style: baseStyle, fontFamily: 'Noto Nastaliq Urdu' }],
+      video,
     );
     const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
     expect(events).toHaveLength(1);
@@ -288,7 +288,7 @@ describe('generateAssTracks RTL safety', () => {
   };
 
   it('never karaoke-splits an RTL driver: text stays whole', () => {
-    const ass = generateAssTracks([{ segments: arWords, rtl: true }], hlStyle, video);
+    const ass = generateAssTracks([{ segments: arWords, style: hlStyle, rtl: true }], video);
     const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
     expect(events).toHaveLength(1);
     expect(events[0]).toContain('مرحبا بكم في تطبيق');
@@ -297,8 +297,8 @@ describe('generateAssTracks RTL safety', () => {
 
   it('prefers the LTR words track as driver when both have words', () => {
     const ass = generateAssTracks(
-      [{ segments: arWords, rtl: true }, { segments: enWords }],
-      hlStyle, video,
+      [{ segments: arWords, style: hlStyle, rtl: true }, { segments: enWords, style: hlStyle }],
+      video,
     );
     const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
     expect(events).toHaveLength(2); // one per ENGLISH word
@@ -308,8 +308,8 @@ describe('generateAssTracks RTL safety', () => {
 
   it('still allows single-word mode for an RTL driver', () => {
     const ass = generateAssTracks(
-      [{ segments: arWords, rtl: true }],
-      { ...baseStyle, singleWord: true }, video,
+      [{ segments: arWords, style: { ...baseStyle, singleWord: true }, rtl: true }],
+      video,
     );
     const events = ass.split('\n').filter((l) => l.startsWith('Dialogue:'));
     expect(events).toHaveLength(4);

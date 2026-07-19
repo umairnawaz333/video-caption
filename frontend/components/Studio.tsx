@@ -9,12 +9,20 @@ import { videoUrl } from '@/lib/api';
 import { PRESETS } from '@/lib/presets';
 import type { CaptionStyle, CaptionTrack, PublicJob } from '@/lib/types';
 
+const trackHasWords = (t?: CaptionTrack) =>
+  !!t && t.segments.some((s) => s.words && s.words.length > 0);
+
 export default function Studio({ job, onReset }: { job: PublicJob; onReset: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [style, setStyle] = useState<CaptionStyle>({ ...PRESETS[0].style });
+  const firstLang = job.tracks[0]?.language ?? 'en';
   const [tracks, setTracks] = useState<CaptionTrack[]>(job.tracks);
-  const [shown, setShown] = useState<string[]>([job.tracks[0]?.language ?? 'en']);
+  const [shown, setShown] = useState<string[]>([firstLang]);
+  // one style per language; new languages start as a copy of the first style
+  const [styles, setStyles] = useState<Record<string, CaptionStyle>>({
+    [firstLang]: { ...PRESETS[0].style },
+  });
+  const [styleTab, setStyleTab] = useState(firstLang);
   const [currentTime, setCurrentTime] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
 
@@ -41,12 +49,38 @@ export default function Studio({ job, onReset }: { job: PublicJob; onReset: () =
     if (videoRef.current) videoRef.current.currentTime = t;
   };
 
+  const styleFor = (lang: string): CaptionStyle =>
+    styles[lang] ?? styles[firstLang] ?? { ...PRESETS[0].style };
+
   const setTrackSegments = (language: string, segments: CaptionTrack['segments']) =>
     setTracks((prev) => prev.map((t) => (t.language === language ? { ...t, segments } : t)));
+
+  const handleJobUpdate = (j: PublicJob) => {
+    setTracks(j.tracks);
+    // drop displayed languages whose track no longer exists; never go empty
+    setShown((prev) => {
+      const kept = prev.filter((code) => j.tracks.some((t) => t.language === code));
+      return kept.length > 0 ? kept : [j.tracks[0]?.language ?? 'en'];
+    });
+    // give any new language its own style, seeded from the first style
+    setStyles((prev) => {
+      const next = { ...prev };
+      for (const t of j.tracks) {
+        if (!next[t.language]) next[t.language] = { ...styleFor(firstLang) };
+      }
+      return next;
+    });
+  };
+
+  // the style tab must always point at a displayed language
+  useEffect(() => {
+    if (!shown.includes(styleTab)) setStyleTab(shown[0]);
+  }, [shown, styleTab]);
 
   const shownTracks = shown
     .map((code) => tracks.find((t) => t.language === code))
     .filter((t): t is CaptionTrack => t !== undefined);
+  const activeTab = shown.includes(styleTab) ? styleTab : shown[0];
 
   return (
     <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
@@ -56,16 +90,30 @@ export default function Studio({ job, onReset }: { job: PublicJob; onReset: () =
           trackLangs={tracks.map((t) => t.language)}
           shown={shown}
           onShownChange={setShown}
-          onJobUpdate={(j) => {
-            setTracks(j.tracks);
-            // drop displayed languages whose track no longer exists; never go empty
-            setShown((prev) => {
-              const kept = prev.filter((code) => j.tracks.some((t) => t.language === code));
-              return kept.length > 0 ? kept : [j.tracks[0]?.language ?? 'en'];
-            });
-          }}
+          onJobUpdate={handleJobUpdate}
         />
-        <StyleControls style={style} onChange={setStyle} />
+        <div>
+          {shown.length > 1 && (
+            <div className="mb-4 flex gap-1 rounded-lg bg-slate-800/60 p-1">
+              {shown.map((code) => (
+                <button
+                  key={code}
+                  onClick={() => setStyleTab(code)}
+                  className={`flex-1 rounded-md px-3 py-1.5 text-xs font-medium uppercase
+                    ${code === activeTab ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  {code === 'en' ? 'English' : code}
+                </button>
+              ))}
+            </div>
+          )}
+          <StyleControls
+            style={styleFor(activeTab)}
+            onChange={(s) => setStyles((prev) => ({ ...prev, [activeTab]: s }))}
+            isPrimary={activeTab === shown[0]}
+            hasWords={trackHasWords(tracks.find((t) => t.language === activeTab))}
+          />
+        </div>
       </aside>
 
       <section className="space-y-6">
@@ -75,12 +123,12 @@ export default function Studio({ job, onReset }: { job: PublicJob; onReset: () =
             className="max-h-[60vh] w-auto max-w-full"
           />
           <CaptionOverlay
-            tracks={shownTracks} style={style}
+            tracks={shownTracks} styles={styles}
             currentTime={currentTime} containerHeight={containerHeight}
           />
         </div>
 
-        <ExportBar jobId={job.id} style={style} tracks={tracks} languages={shown} onReset={onReset} />
+        <ExportBar jobId={job.id} styles={styles} tracks={tracks} languages={shown} onReset={onReset} />
         <TranscriptEditor tracks={tracks} onChange={setTrackSegments} onSeek={seek} currentTime={currentTime} />
       </section>
     </div>

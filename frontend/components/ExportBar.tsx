@@ -6,12 +6,12 @@ import type { CaptionStyle, CaptionTrack } from '@/lib/types';
 type State = 'idle' | 'exporting' | 'done' | 'downloaded' | 'error';
 
 export default function ExportBar({
-  jobId, style, tracks, languages, onReset,
+  jobId, styles, tracks, languages, onReset,
 }: {
   jobId: string;
-  style: CaptionStyle;
-  tracks: CaptionTrack[];             // all tracks, for saving edits
-  languages: string[];                // displayed tracks (1-2), top line first
+  styles: Record<string, CaptionStyle>; // per-language styles
+  tracks: CaptionTrack[];               // all tracks, for saving edits
+  languages: string[];                  // displayed tracks (1-2), top line first
   onReset: () => void;
 }) {
   const [state, setState] = useState<State>('idle');
@@ -27,7 +27,7 @@ export default function ExportBar({
       for (const track of tracks) {
         await patchTranscript(jobId, track.segments, track.language);
       }
-      await exportJob(jobId, style, languages);
+      await exportJob(jobId, styles, languages);
       timer.current = setInterval(async () => {
         const job = await getJob(jobId).catch(() => null);
         if (!job) return;

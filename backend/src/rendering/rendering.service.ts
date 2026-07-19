@@ -58,13 +58,19 @@ export class RenderingService {
 
   constructor(private jobs: JobsService, private ffmpeg: FfmpegService) {}
 
-  async export(jobId: string, style: CaptionStyle, languages?: string[]): Promise<void> {
+  async export(
+    jobId: string,
+    stylesByLang: Record<string, CaptionStyle>,
+    languages?: string[],
+  ): Promise<void> {
     const job = this.jobs.get(jobId);
     if (!job) throw new BadRequestException('job not found');
     if (!['ready', 'done'].includes(job.status) || !job.video || !job.tracks[0]) {
       throw new BadRequestException('job is not ready for export');
     }
     const langs = validateLanguages(job, languages);
+    const fallback = stylesByLang[langs[0]] ?? Object.values(stylesByLang)[0];
+    if (!fallback) throw new BadRequestException('missing caption style');
     const input = fs.readdirSync(job.dir).find((f) => f.startsWith('input'));
     if (!input) throw new BadRequestException('input video missing');
 
@@ -72,6 +78,7 @@ export class RenderingService {
     try {
       const tracks: AssTrack[] = langs.map((lang) => ({
         segments: job.tracks.find((t) => t.language === lang)!.segments,
+        style: stylesByLang[lang] ?? fallback,
         fontFamily: LANG_RENDER[lang]?.font,
         fontScale: LANG_RENDER[lang]?.scale,
         rtl: RTL_LANGS.has(lang),
@@ -79,7 +86,7 @@ export class RenderingService {
       const assPath = path.join(job.dir, 'captions.ass');
       fs.writeFileSync(
         assPath,
-        generateAssTracks(tracks, style, {
+        generateAssTracks(tracks, {
           width: job.video.width,
           height: job.video.height,
         }),

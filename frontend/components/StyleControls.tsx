@@ -12,8 +12,13 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export default function StyleControls({
-  style, onChange,
-}: { style: CaptionStyle; onChange: (s: CaptionStyle) => void }) {
+  style, onChange, isPrimary = true, hasWords = true,
+}: {
+  style: CaptionStyle;
+  onChange: (s: CaptionStyle) => void;
+  isPrimary?: boolean; // position controls live on the first displayed language
+  hasWords?: boolean;  // word-level features need word timings (original track only)
+}) {
   const set = (patch: Partial<CaptionStyle>) => onChange({ ...style, ...patch, preset: undefined });
 
   return (
@@ -73,13 +78,15 @@ export default function StyleControls({
             className="accent-indigo-500"
           />
         </Row>
-        <Row label="One word at a time">
-          <input
-            type="checkbox" checked={style.singleWord}
-            onChange={(e) => set({ singleWord: e.target.checked })}
-            className="accent-indigo-500"
-          />
-        </Row>
+        {hasWords && (
+          <Row label="One word at a time">
+            <input
+              type="checkbox" checked={style.singleWord}
+              onChange={(e) => set({ singleWord: e.target.checked })}
+              className="accent-indigo-500"
+            />
+          </Row>
+        )}
         <Row label="Outline">
           <span className="flex items-center gap-2">
             <input
@@ -94,36 +101,40 @@ export default function StyleControls({
             />
           </span>
         </Row>
-        <Row label="Highlight spoken word">
-          <span className="flex items-center gap-2">
-            <input
-              type="checkbox" checked={style.highlight.enabled}
-              onChange={(e) => set({ highlight: { ...style.highlight, enabled: e.target.checked } })}
-              className="accent-indigo-500"
-            />
-            <select
-              value={style.highlight.mode} disabled={!style.highlight.enabled}
-              onChange={(e) => set({ highlight: { ...style.highlight, mode: e.target.value as 'color' | 'box' } })}
-              className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm disabled:opacity-30"
-            >
-              <option value="color">Color</option>
-              <option value="box">Box</option>
-            </select>
-            <input
-              type="color" value={style.highlight.color} disabled={!style.highlight.enabled}
-              onChange={(e) => set({ highlight: { ...style.highlight, color: e.target.value.toUpperCase() } })}
-              className="h-8 w-14 cursor-pointer rounded border border-slate-700 bg-slate-900 disabled:opacity-30"
-            />
-          </span>
-        </Row>
-        <Row label={`Word sync (${style.wordLagSec >= 0 ? '+' : ''}${style.wordLagSec.toFixed(2)}s)`}>
-          <input
-            type="range" min={-0.3} max={0.3} step={0.05} value={style.wordLagSec}
-            disabled={!style.highlight.enabled && !style.singleWord}
-            onChange={(e) => set({ wordLagSec: Number(e.target.value) })}
-            className="w-40 accent-indigo-500 disabled:opacity-30"
-          />
-        </Row>
+        {hasWords && (
+          <>
+            <Row label="Highlight spoken word">
+              <span className="flex items-center gap-2">
+                <input
+                  type="checkbox" checked={style.highlight.enabled}
+                  onChange={(e) => set({ highlight: { ...style.highlight, enabled: e.target.checked } })}
+                  className="accent-indigo-500"
+                />
+                <select
+                  value={style.highlight.mode} disabled={!style.highlight.enabled}
+                  onChange={(e) => set({ highlight: { ...style.highlight, mode: e.target.value as 'color' | 'box' } })}
+                  className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1.5 text-sm disabled:opacity-30"
+                >
+                  <option value="color">Color</option>
+                  <option value="box">Box</option>
+                </select>
+                <input
+                  type="color" value={style.highlight.color} disabled={!style.highlight.enabled}
+                  onChange={(e) => set({ highlight: { ...style.highlight, color: e.target.value.toUpperCase() } })}
+                  className="h-8 w-14 cursor-pointer rounded border border-slate-700 bg-slate-900 disabled:opacity-30"
+                />
+              </span>
+            </Row>
+            <Row label={`Word sync (${style.wordLagSec >= 0 ? '+' : ''}${style.wordLagSec.toFixed(2)}s)`}>
+              <input
+                type="range" min={-0.3} max={0.3} step={0.05} value={style.wordLagSec}
+                disabled={!style.highlight.enabled && !style.singleWord}
+                onChange={(e) => set({ wordLagSec: Number(e.target.value) })}
+                className="w-40 accent-indigo-500 disabled:opacity-30"
+              />
+            </Row>
+          </>
+        )}
       </div>
 
       <div>
@@ -159,31 +170,37 @@ export default function StyleControls({
         </Row>
       </div>
 
-      <div>
-        <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500">Position</h3>
-        <Row label="Anchor">
-          <div className="flex gap-1">
-            {(['top', 'middle', 'bottom'] as const).map((p) => (
-              <button
-                key={p}
-                onClick={() => set({ position: p })}
-                className={`rounded-md px-3 py-1.5 text-sm capitalize
-                  ${style.position === p ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-        </Row>
-        <Row label={`Offset (${style.verticalOffsetPct}%)`}>
-          <input
-            type="range" min={0} max={40} step={1} value={style.verticalOffsetPct}
-            disabled={style.position === 'middle'}
-            onChange={(e) => set({ verticalOffsetPct: Number(e.target.value) })}
-            className="w-40 accent-indigo-500 disabled:opacity-30"
-          />
-        </Row>
-      </div>
+      {isPrimary ? (
+        <div>
+          <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-500">Position</h3>
+          <Row label="Anchor">
+            <div className="flex gap-1">
+              {(['top', 'middle', 'bottom'] as const).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => set({ position: p })}
+                  className={`rounded-md px-3 py-1.5 text-sm capitalize
+                    ${style.position === p ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </Row>
+          <Row label={`Offset (${style.verticalOffsetPct}%)`}>
+            <input
+              type="range" min={0} max={40} step={1} value={style.verticalOffsetPct}
+              disabled={style.position === 'middle'}
+              onChange={(e) => set({ verticalOffsetPct: Number(e.target.value) })}
+              className="w-40 accent-indigo-500 disabled:opacity-30"
+            />
+          </Row>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-600">
+          Position follows the first (top) language — switch to its tab to move both captions.
+        </p>
+      )}
     </div>
   );
 }

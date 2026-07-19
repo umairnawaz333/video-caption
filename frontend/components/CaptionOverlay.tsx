@@ -51,32 +51,46 @@ function WordLine({
   );
 }
 
-/** Renders 1-2 caption tracks stacked at the styled position. */
+/** Renders 1-2 caption tracks stacked, each styled by its own language's style. */
 export default function CaptionOverlay({
-  tracks, style, currentTime, containerHeight,
+  tracks, styles, currentTime, containerHeight,
 }: {
-  tracks: CaptionTrack[];             // display order: first = top line
-  style: CaptionStyle;
+  tracks: CaptionTrack[];                    // display order: first = top line
+  styles: Record<string, CaptionStyle>;      // per-language styles
   currentTime: number;
   containerHeight: number;
 }) {
-  if (containerHeight === 0) return null;
-  const fontSize = (style.fontSizePct / 100) * containerHeight;
+  if (containerHeight === 0 || tracks.length === 0) return null;
+  const anchorStyle = styles[tracks[0].language];
+  if (!anchorStyle) return null;
+  const anchorFontSize = (anchorStyle.fontSizePct / 100) * containerHeight;
 
   const lines = tracks
     .map((track) => ({
       language: track.language,
+      style: styles[track.language] ?? anchorStyle,
       segment: findActiveSegment(track.segments, currentTime),
     }))
-    .filter((l): l is { language: string; segment: Segment } => l.segment !== null);
+    .filter((l): l is { language: string; style: CaptionStyle; segment: Segment } => l.segment !== null);
   if (lines.length === 0) return null;
 
   return (
-    <div style={{ ...positionToCss(style), flexDirection: 'column', alignItems: 'center', gap: fontSize * 0.25 }}>
-      {lines.map(({ language, segment }) => (
+    <div
+      style={{
+        // the first (top) track's style anchors the stacked block
+        ...positionToCss(anchorStyle),
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: anchorFontSize * 0.25,
+      }}
+    >
+      {lines.map(({ language, style, segment }) => (
         <span
           key={language}
-          style={{ ...styleToCss(style, containerHeight), ...langLineCss(language, fontSize) }}
+          style={{
+            ...styleToCss(style, containerHeight),
+            ...langLineCss(language, (style.fontSizePct / 100) * containerHeight),
+          }}
         >
           <WordLine
             segment={segment}

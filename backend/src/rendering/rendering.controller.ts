@@ -6,6 +6,7 @@ import type { Response } from 'express';
 import * as fs from 'fs';
 import * as path from 'path';
 import { JobsService } from '../jobs/jobs.service';
+import { CaptionStyle } from '../jobs/types';
 import { RenderingService, validateLanguages, validateStyle } from './rendering.service';
 
 @Controller('jobs')
@@ -14,15 +15,27 @@ export class RenderingController {
 
   @Post(':id/export')
   @HttpCode(202)
-  export(@Param('id') id: string, @Body() body: { style: unknown; languages?: unknown }) {
-    const style = validateStyle(body?.style);
+  export(
+    @Param('id') id: string,
+    @Body() body: { style?: unknown; styles?: unknown; languages?: unknown },
+  ) {
     const job = this.jobs.get(id);
     if (!job) throw new NotFoundException('Job not found');
     if (!['ready', 'done'].includes(job.status)) {
       throw new BadRequestException('transcript is not ready yet');
     }
     const languages = validateLanguages(job, body?.languages);
-    void this.rendering.export(id, style, languages); // async; client polls GET /jobs/:id
+    // per-language styles preferred; a single `style` applies to all languages
+    const stylesByLang: Record<string, CaptionStyle> = {};
+    if (body?.styles && typeof body.styles === 'object') {
+      for (const lang of languages) {
+        stylesByLang[lang] = validateStyle((body.styles as Record<string, unknown>)[lang]);
+      }
+    } else {
+      const style = validateStyle(body?.style);
+      for (const lang of languages) stylesByLang[lang] = style;
+    }
+    void this.rendering.export(id, stylesByLang, languages); // async; client polls GET /jobs/:id
     return { ok: true };
   }
 

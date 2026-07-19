@@ -59,11 +59,15 @@ export const patchTranscript = (id: string, segments: Segment[], language?: stri
     body: JSON.stringify({ segments, language }),
   }).then((r) => json<PublicJob>(r));
 
-export const exportJob = (id: string, style: CaptionStyle, languages?: string[]) =>
+export const exportJob = (
+  id: string,
+  styles: Record<string, CaptionStyle>, // one style per exported language
+  languages?: string[],
+) =>
   fetch(`${BASE}/api/jobs/${id}/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ style, languages }),
+    body: JSON.stringify({ styles, languages }),
   }).then((r) => json<{ ok: boolean }>(r));
 
 export const videoUrl = (id: string) => `${BASE}/api/jobs/${id}/video`;

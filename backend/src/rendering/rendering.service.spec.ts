@@ -55,7 +55,7 @@ describe('RenderingService', () => {
 
   it('writes ass, burns, and marks done', async () => {
     const job = readyJob();
-    await service.export(job.id, style);
+    await service.export(job.id, { en: style });
     expect(jobs.get(job.id)!.status).toBe('done');
     const ass = fs.readFileSync(path.join(job.dir, 'captions.ass'), 'utf8');
     expect(ass).toContain('Dialogue:');
@@ -65,13 +65,13 @@ describe('RenderingService', () => {
   it('sets error status when burn fails', async () => {
     const job = readyJob();
     ffmpeg.burnSubtitles.mockRejectedValueOnce(new Error('boom'));
-    await service.export(job.id, style);
+    await service.export(job.id, { en: style });
     expect(jobs.get(job.id)!.status).toBe('error');
     expect(jobs.get(job.id)!.error).toMatch(/boom/);
   });
 
   it('rejects export when transcript not ready', async () => {
     const job = jobs.create();
-    await expect(service.export(job.id, style)).rejects.toThrow(/not ready/i);
+    await expect(service.export(job.id, { en: style })).rejects.toThrow(/not ready/i);
   });
 });
